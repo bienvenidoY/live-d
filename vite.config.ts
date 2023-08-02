@@ -1,6 +1,7 @@
 import { rmSync } from 'node:fs'
 import path from 'node:path'
-import { defineConfig } from 'vite'
+import { defineConfig, splitVendorChunkPlugin } from 'vite'
+import UnoCSS from 'unocss/vite'
 import react from '@vitejs/plugin-react'
 import electron from 'vite-plugin-electron'
 import renderer from 'vite-plugin-electron-renderer'
@@ -20,8 +21,16 @@ export default defineConfig(({ command }) => {
         '@': path.join(__dirname, 'src')
       },
     },
+    css: {
+      preprocessorOptions: {
+        scss: {
+          additionalData: '@use "sass:math"; @import "src/styles/variables.scss";',
+        },
+      },
+    },
     plugins: [
       react(),
+      UnoCSS(),
       electron([
         {
           // Main-Process entry file of the Electron App.
@@ -47,7 +56,7 @@ export default defineConfig(({ command }) => {
         {
           entry: 'electron/preload/index.ts',
           onstart(options) {
-            // Notify the Renderer-Process to reload the page when the Preload-Scripts build is complete, 
+            // Notify the Renderer-Process to reload the page when the Preload-Scripts build is complete,
             // instead of restarting the entire Electron App.
             options.reload()
           },
@@ -65,6 +74,7 @@ export default defineConfig(({ command }) => {
       ]),
       // Use Node.js API in the Renderer-process
       renderer(),
+      splitVendorChunkPlugin()
     ],
     server: process.env.VSCODE_DEBUG && (() => {
       const url = new URL(pkg.debug.env.VITE_DEV_SERVER_URL)

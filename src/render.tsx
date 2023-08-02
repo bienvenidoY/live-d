@@ -2,8 +2,8 @@ import { Suspense, StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { HashRouter } from 'react-router-dom'
 
-import { Loading } from '@components'
-import App from '@containers/App'
+import { Loading } from '@/components'
+import App from '@/containers/App'
 import '@unocss/reset/tailwind.css'
 import 'uno.css'
 

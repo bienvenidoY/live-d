@@ -1,13 +1,14 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App'
 import './samples/node-api'
-import './index.scss'
+import { isClashX, setupJsBridge } from '@/lib/jsBridge'
 
-ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-)
+import renderApp from './render'
 
-postMessage({ payload: 'removeLoading' }, '*')
+/**
+ * Global entry
+ * Will check if need setup jsbridge
+ */
+if (isClashX()) {
+  setupJsBridge(() => renderApp())
+} else {
+  renderApp()
+}

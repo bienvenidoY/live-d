@@ -124,7 +124,7 @@ const Update = () => {
         </div>
       </Modal>
       <button disabled={checking} onClick={checkUpdate}>
-        {checking ? 'Checking...' : 'Check update'}
+        {checking ? '更新中...' : '检查更新'}
       </button>
     </>
   )
