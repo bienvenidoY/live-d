@@ -1,6 +1,6 @@
 import { useState }  from 'react'
 
-import { Input, Space, Button, Grid, Table, Typography, Image, Checkbox, Card, Message } from '@arco-design/web-react';
+import { Input, Space, Button, Grid, Table, Typography, Image, Checkbox, Card, Notification } from '@arco-design/web-react';
 import { Resizable } from 'react-resizable';
 const CheckboxGroup = Checkbox.Group;
 const useCheckbox = Checkbox.useCheckbox;
@@ -71,14 +71,20 @@ const SearchHeader: React.FC = () => {
 
   function addLive() {
     if(!liveUrl) {
-      Message.warning('请输入链接')
+      Notification.warning({
+        content: '请输入链接',
+      })
       return;
     }
     if(!validURL(liveUrl)) {
-      Message.error('请输入正确链接')
+      Notification.error({
+        content: '请输入正确链接',
+      })
       return
     }
     // TODO 添加直播间
+    // const liveRoom = []
+    // setLiveRoomList([...liveRoomList, ...liveRoom])
   }
 
   function clearAll() {
@@ -135,8 +141,6 @@ const SearchHeader: React.FC = () => {
     </div>)
 }
 
-
-
 const LiveRoomTable: React.FC = () => {
   return (
     <Row>
@@ -173,31 +177,35 @@ const LiveRoomTable: React.FC = () => {
 
 
 const options = [
-  {label: '进入', value: 1,},
-  {label: '礼物', value: 2,},
-  {label: '弹幕', value: 3,},
-  {label: '点赞', value: 4,},
-  {label: '关注', value: 5,},
-  {label: '信息跟随', value: 6,},
-  {label: '自动去重', value: 7,},
-  {label: '自动抓取', value: 8,},
-  {label: '解析完整信息(需要代理,采集速度会变慢)', value: 9,},
+  {label: '进入', value: 1, defaultChecked: false},
+  {label: '礼物', value: 2, defaultChecked: true},
+  {label: '弹幕', value: 3, defaultChecked: true},
+  {label: '点赞', value: 4, defaultChecked: true},
+  {label: '关注', value: 5, defaultChecked: true},
+  {label: '信息跟随', value: 6, defaultChecked: true},
+  {label: '自动去重', value: 7, defaultChecked: true},
+  {label: '自动抓取', value: 8, defaultChecked: true},
+  {label: '解析完整信息(需要代理,采集速度会变慢)', value: 9, defaultChecked: false},
 ]
 const UserTableOptions: React.FC = () => {
   const {
     selected,
-    selectAll,
     setSelected,
-    unSelectAll,
-    isAllSelected,
     isPartialSelected,
     toggle,
   } = useCheckbox(
     options.map((x) => x.value),
+    options.map((x) => x.defaultChecked && x.value)
   );
+
+  const onChange = (v) => {
+    console.log(v)
+    setSelected(v)
+  }
+
   return (
     <div>
-      <CheckboxGroup value={selected} options={options} onChange={setSelected} />
+      <CheckboxGroup value={selected} options={options} onChange={onChange} />
     </div>
   );
 }
@@ -305,7 +313,7 @@ const UserTable: React.FC = () => {
       }}
       border
       columns={userColumns}
-      data={userData}
+      data={data}
       pagination={false}
     />
   </div>
@@ -313,11 +321,14 @@ const UserTable: React.FC = () => {
 
 
 const LiveDanmuPage = () => {
+  // const [liveRoomList, setLiveRoomList] = useState([])
+
+
   return <div className="page">
     <Space size={16} direction="vertical" style={{ width: '100%' }}>
       <Card>
         <SearchHeader />
-        <LiveRoomTable />
+        <LiveRoomTable/>
       </Card>
       <Row>
         <Col span={24}>
