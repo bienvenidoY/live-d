@@ -1,6 +1,7 @@
 import { useAtom } from 'jotai'
 import { useEffect, useState } from 'react'
 import { ipcRenderer } from 'electron'
+import useSWR from 'swr'
 
 import {Modal, Input, Alert, warning, Loading} from '@/components'
 import { useObject } from '@/lib/hook'
@@ -20,47 +21,14 @@ export default function ExternalController () {
     const [isLoading, setLoading] = useState(true)
     const [errText, setErr] = useState('')
 
-    async function getLicense() {
-
-        try {
-            setTimeout(() => {
-                setLoading(true)
-            }, 300)
-
-            const resp = await client.getActiveCodeTime(defaultSecret as string)
-            // 过期打开弹窗，否则关闭弹窗
-            setLoading(false)
-            errText && setErr('')
-            const isExpired = license.expireTime && +new Date(license.expireTime) < +new Date().getTime()
-            if(isExpired) {
-                setErr('序列号已过期')
-            }
-            setIdentityIsShow(!!isExpired)
-            setLicense(resp.data ?? {})
-        }catch (e) {
-            console.log(e.message)
-            setErr(e.message)
-            setLoading(false)
-        }
-    }
-
-    async function getLicenseCode() {
+    useSWR('getLicenseCode', async () => {
         const licenseCode = await ipcRenderer.invoke('license-disk-store-get')
-        setSecret(licenseCode)
-
         if(!licenseCode) {
             setIdentityIsShow(true)
             return
         }
-
-        getLicense().then()
-    }
-    useEffect(() => {
-        // 本地没有或者过期弹开身份验证弹窗
-        getLicenseCode().then()
-    }, [])
-
-
+        await getLicense(licenseCode)
+    })
 
     async function handleOk () {
         const {licenseCode} = value
@@ -75,12 +43,32 @@ export default function ExternalController () {
             await ipcRenderer.invoke('wsPort-disk-store')
             await ipcRenderer.invoke('proxy-disk-store')
             setSecret(licenseCode)
-            await getLicense()
+            await getLicense(licenseCode)
         }catch (e) {
             console.log(e.message)
             setErr(e.message)
         }
 
+    }
+
+    async function getLicense(licenseCode) {
+        try {
+            setLoading(true)
+            const resp = await client.getActiveCodeTime(licenseCode as string)
+            // 过期打开弹窗，否则关闭弹窗
+            setLoading(false)
+            errText && setErr('')
+            const isExpired = license.expireTime && +new Date(license.expireTime) < +new Date().getTime()
+            if(isExpired) {
+                setErr('序列号已过期')
+            }
+            setIdentityIsShow(!!isExpired)
+            setLicense(resp.data ?? {})
+        }catch (e) {
+            console.log(e.message)
+            setErr(e.message)
+            setLoading(false)
+        }
     }
 
     return (
