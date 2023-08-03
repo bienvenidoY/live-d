@@ -65,7 +65,12 @@ const data = Array(100000)
     email1: `kevin.sandra_${index}@example.com`,
   }));
 
-const SearchHeader: React.FC = () => {
+
+interface SearchHeaderProps {
+  onAddLive: (liveUrlList: string[]) => void
+}
+
+const SearchHeader: React.FC = (props: SearchHeaderProps) => {
 
   const [liveUrl, setLiveUrl] = useState('')
 
@@ -83,8 +88,7 @@ const SearchHeader: React.FC = () => {
       return
     }
     // TODO 添加直播间
-    // const liveRoom = []
-    // setLiveRoomList([...liveRoomList, ...liveRoom])
+    props.onAddLive([liveUrl])
   }
 
   function clearAll() {
@@ -141,12 +145,24 @@ const SearchHeader: React.FC = () => {
     </div>)
 }
 
-const LiveRoomTable: React.FC = () => {
+
+interface LiveRoomTableProps {
+  liveRoomList: typeof columns[]
+}
+
+const LiveRoomTable: React.FC = (props: LiveRoomTableProps) => {
   return (
     <Row>
       <Col span={16}>
         <div>
           <Table
+            onRow={(record, index) => {
+              return {
+                onContextMenu: (event) => {
+                  console.log(123123, event, record)
+                },
+              };
+            }}
             size='mini'
           virtualized
           scroll={{
@@ -154,7 +170,7 @@ const LiveRoomTable: React.FC = () => {
           }}
           border
           columns={columns}
-          data={data}
+          data={props.liveRoomList}
           pagination={false}
         />
         </div>
@@ -313,7 +329,7 @@ const UserTable: React.FC = () => {
       }}
       border
       columns={userColumns}
-      data={data}
+      data={userData}
       pagination={false}
     />
   </div>
@@ -321,14 +337,18 @@ const UserTable: React.FC = () => {
 
 
 const LiveDanmuPage = () => {
-  // const [liveRoomList, setLiveRoomList] = useState([])
+  const [liveRoomList, setLiveRoomList] = useState([])
 
+  function addLive(liveUrlList: string[]) {
+    console.log(liveUrlList, data.slice(0, 100))
+    setLiveRoomList(data.slice(0, 100))
+  }
 
   return <div className="page">
     <Space size={16} direction="vertical" style={{ width: '100%' }}>
       <Card>
-        <SearchHeader />
-        <LiveRoomTable/>
+        <SearchHeader onAddLive={addLive}/>
+        <LiveRoomTable liveRoomList={liveRoomList}/>
       </Card>
       <Row>
         <Col span={24}>
