@@ -18,7 +18,7 @@ export default function ExternalController () {
     const [defaultSecret, setSecret] = useState('')
 
 
-    const [isLoading, setLoading] = useState(true)
+    const [isLoading, setLoading] = useState(false)
     const [errText, setErr] = useState('')
 
     useSWR('getLicenseCode', async () => {
