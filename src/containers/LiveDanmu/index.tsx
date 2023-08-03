@@ -1,6 +1,6 @@
-import { useState }  from 'react'
+import {useEffect, useState} from 'react'
 
-import { Input, Space, Button, Grid, Table, Typography, Image, Checkbox, Card, Notification } from '@arco-design/web-react';
+import { Input, Space, Button, Grid, Table, Typography, Image, Checkbox, Card, Notification ,Drawer} from '@arco-design/web-react';
 import { Resizable } from 'react-resizable';
 const CheckboxGroup = Checkbox.Group;
 const useCheckbox = Checkbox.useCheckbox;
@@ -11,6 +11,7 @@ const Row = Grid.Row;
 const Col = Grid.Col;
 import React from 'react'
 import {validURL} from "@/lib/validate";
+import  * as XLSX from 'xlsx'
 
 const columns = [
   { title: '序号',
@@ -68,6 +69,7 @@ const data = Array(100000)
 
 interface SearchHeaderProps {
   onAddLive: (liveUrlList: string[]) => void
+  setTableValues: (list: any[]) => void
 }
 
 const SearchHeader: React.FC = (props: SearchHeaderProps) => {
@@ -99,8 +101,76 @@ const SearchHeader: React.FC = (props: SearchHeaderProps) => {
     // TODO 清空用户评论列表
     // TODO 清空二维码信息
   }
+  function handleUploadFile(){
+    // 获取导入的内容
+    return new Promise((resolve,reject)=>{
+      // 解析Excel
+      function changeFile(e) {
+        const file = e.target.files[0]
+        const reader = new FileReader();
+        reader.readAsArrayBuffer(file);
+        reader.onloadend = (progressEvent)=>{
+          const arrayBuffer = reader.result;
+          const options = { type: 'array' };
+          const workbook = XLSX.read(arrayBuffer, options);
+          const reslut = []
+          workbook.SheetNames.forEach(item=>{
+            const tv = XLSX.utils.sheet_to_json(workbook.Sheets[item])
+            if(tv.length<200){
+              reslut.push({
+                name:item,
+                tableValue:tv
+              })
+            }else {
+              Notification.error({
+                title: 'Error',
+                content: '最多不能超过200条',
+              })
+            }
+          })
+          resolve(reslut)
+        }
+        document.body.removeChild(input)
+      }
+      const input = document.createElement('input')
+      input.type = 'file'
+      input.onchange =(e)=> changeFile(e)
+      // input.accept = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      document.body.append(input)
+      input.click()
+    })
+  }
+  // 判断字符串是不是url
+  const isValidUrl = urlString=> {
+    let url;
+    try {
+      url =new URL(urlString);
+    }
+    catch(e){
+      return false;
+    }
+    return url.protocol === "http:" || url.protocol === "https:";
+  }
+
   function uploadExcelFile() {
     // TODO 上传excel 解析到直播列表中
+    const errList = [] // 不符合要求的数据
+    const successList = [] //符合要求的数据
+    handleUploadFile().then(res=>{
+      res.forEach(d=>{
+        d.tableValue.forEach((s,index)=>{
+          if(isValidUrl(s[Object.keys(s)[0]])){
+            successList.push(s)
+          }else{
+            errList.push({
+              idx:index,val:s
+            })
+          }
+        })
+      })
+      props.setTableValues([successList,errList])
+      console.log(errList,successList,123123123)
+    })
   }
   function startAll() {
     // TODO 连接所有直播列表中ws
@@ -117,7 +187,7 @@ const SearchHeader: React.FC = (props: SearchHeaderProps) => {
       <Input style={{width: 400}} placeholder={'输入直播链接'}
              value={liveUrl}
              onChange={(value) => {
-              setLiveUrl(value)
+               setLiveUrl(value)
              }}
       />
       <Button  type='secondary' onClick={clearAll}>
@@ -138,11 +208,11 @@ const SearchHeader: React.FC = (props: SearchHeaderProps) => {
       <Button  type='secondary' onClick={saveExcelFile}>
         保存Excel
       </Button>
-     {/* <Button  type='secondary'>
+      {/* <Button  type='secondary'>
         软件设置
       </Button>*/}
     </Space>
-    </div>)
+  </div>)
 }
 
 
@@ -164,28 +234,28 @@ const LiveRoomTable: React.FC = (props: LiveRoomTableProps) => {
               };
             }}
             size='mini'
-          virtualized
-          scroll={{
-            y: 300,
-          }}
-          border
-          columns={columns}
-          data={props.liveRoomList}
-          pagination={false}
-        />
+            virtualized
+            scroll={{
+              y: 300,
+            }}
+            border
+            columns={columns}
+            data={props.liveRoomList}
+            pagination={false}
+          />
         </div>
       </Col>
       <Col span={8}>
-          <Space size='large' align='center' style={{ margin: 24 }}>
-            <Image
-              width={250}
-              height={250}
-              src='some-error.png'
-              alt='未选择用户'
-            />
-            <div style={{height: 300, width: 1 }}>
-            </div>
-          </Space>
+        <Space size='large' align='center' style={{ margin: 24 }}>
+          <Image
+            width={250}
+            height={250}
+            src='some-error.png'
+            alt='未选择用户'
+          />
+          <div style={{height: 300, width: 1 }}>
+          </div>
+        </Space>
       </Col>
     </Row>
   )
@@ -335,9 +405,44 @@ const UserTable: React.FC = () => {
   </div>
 }
 
+const ErrorDrawer:React.FC =(props:{drawerShow:boolean,setDrawerShow:(val:boolean)=>void})=>{
+  console.log(props,66666)
+  return <div>
+    <Drawer
+      width={332}
+      title={<span>错误数据</span>}
+      visible={props.drawerShow}
+      onOk={() => {
+        props.setDrawerShow(false);
+      }}
+      onCancel={() => {
+        props.setDrawerShow(false);
+      }}
+    >
+      {
+        props.tableValues[1]?props.tableValues[1].map((item,index)=>{
+          return (
+            <div key={index}>
+              {`第${index+1}行数据有误`}
+            </div>
+          )
+        }):null
+      }
+    </Drawer>
+  </div>
+}
+
 
 const LiveDanmuPage = () => {
   const [liveRoomList, setLiveRoomList] = useState([])
+  const [drawerShow,setDrawerShow] = useState(false)
+  const [tableValues,setTableValues] = useState([])
+
+  useEffect(()=>{
+    if(tableValues.length>0){
+      setDrawerShow(true)
+    }
+  },[tableValues])
 
   function addLive(liveUrlList: string[]) {
     console.log(liveUrlList, data.slice(0, 100))
@@ -347,7 +452,7 @@ const LiveDanmuPage = () => {
   return <div className="page">
     <Space size={16} direction="vertical" style={{ width: '100%' }}>
       <Card>
-        <SearchHeader onAddLive={addLive}/>
+        <SearchHeader onAddLive={addLive} setTableValues={setTableValues} />
         <LiveRoomTable liveRoomList={liveRoomList}/>
       </Card>
       <Row>
@@ -361,6 +466,7 @@ const LiveDanmuPage = () => {
         </Col>
       </Row>
     </Space>
+    <ErrorDrawer drawerShow={drawerShow} setDrawerShow={setDrawerShow} tableValues={tableValues}/>
   </div>
 }
 
