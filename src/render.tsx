@@ -5,6 +5,7 @@ import { HashRouter } from 'react-router-dom'
 import { Loading } from '@/components'
 import App from '@/containers/App'
 import '@unocss/reset/tailwind.css'
+import "@arco-design/web-react/dist/css/arco.css";
 import 'uno.css'
 
 export default function renderApp () {
