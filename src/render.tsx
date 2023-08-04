@@ -11,13 +11,13 @@ import 'uno.css'
 export default function renderApp () {
     const rootEl = document.getElementById('root')
     const AppInstance = (
-        <StrictMode>
+        // <StrictMode>
             <HashRouter>
                 <Suspense fallback={<Loading visible />}>
                     <App />
                 </Suspense>
             </HashRouter>
-        </StrictMode>
+        // </StrictMode>
     )
 
     const root = createRoot(rootEl!)
