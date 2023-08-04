@@ -293,4 +293,10 @@ export class ServiceClient {
             serialKey: code
         })
     }
+
+    async getRoomInfo (liveUrlList: string[] ) {
+        return await this.axiosClient.post<Config>('api/v1/getRoomInfo', {
+            url: liveUrlList
+        })
+    }
 }

@@ -1,6 +1,8 @@
 import React, {forwardRef, useState} from "react";
 import {Table} from "@arco-design/web-react";
 import {Resizable} from 'react-resizable';
+import {openRightMenu} from './rightMenu'
+
 
 
 const CustomResizeHandle = forwardRef((props, ref) => {
@@ -76,13 +78,13 @@ export const ResizeAbel: React.FC = (props: ResizeAbelProps) => {
             });
         };
     }
-    console.log(props.tableOriginal)
     return (
         <Table
             onRow={(record, index) => {
                 return {
                     onContextMenu: (event) => {
                         console.log(123123, event, record)
+                        openRightMenu(event.clientX,event.clientY)
                     },
                 };
             }}

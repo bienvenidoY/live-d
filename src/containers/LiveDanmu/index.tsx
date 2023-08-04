@@ -25,6 +25,7 @@ import React from 'react'
 import {validURL} from "@/lib/validate";
 import * as XLSX from 'xlsx'
 import {ResizeAbel} from './components/resizable'
+import {useServiceClient} from "@/stores";
 
 const columns = [
     {
@@ -186,6 +187,7 @@ const SearchHeader: React.FC = (props: SearchHeaderProps) => {
                 })
             })
             props.setTableValues([successList, errList])
+            props.onAddLive(successList.map(item=>item[Object.keys(item)[0]]))
             console.log(errList, successList, 123123123)
         })
     }
@@ -248,7 +250,7 @@ const LiveRoomTable: React.FC = (props: LiveRoomTableProps) => {
                 <div>
                     <ResizeAbel
                         columns={columns}
-                        data={data}
+                        data={props.liveRoomList}
                     />
                 </div>
             </Col>
@@ -443,6 +445,8 @@ const LiveDanmuPage = () => {
     const [liveRoomList, setLiveRoomList] = useState([])
     const [drawerShow, setDrawerShow] = useState(false)
     const [tableValues, setTableValues] = useState([])
+    const client = useServiceClient()
+
 
     useEffect(() => {
         if (tableValues.length > 0) {
@@ -452,7 +456,9 @@ const LiveDanmuPage = () => {
 
 
     function addLive(liveUrlList: string[]) {
-        setLiveRoomList(data.slice(0, 100))
+        client.getRoomInfo(liveUrlList).then(res=>{
+            setLiveRoomList(data.slice(0, 100))
+        })
     }
 
     return <div className="page">

@@ -1,0 +1,19 @@
+.contextMenu-box-center {
+  background: #fff;
+  border: 1px solid #ddd;
+  width: 140px;
+}
+
+.contextMenu-box-center-item {
+  text-align: center;
+  padding: 5px;
+  border-bottom: 1px solid #ddd;
+  font-size: 12px;
+  cursor: pointer;
+  &:hover{
+    background: #eee;
+  }
+  &:last-of-type{
+    border-bottom: none;
+  }
+}
