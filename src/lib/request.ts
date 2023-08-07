@@ -1,6 +1,8 @@
 import axios, { type AxiosRequestConfig, type AxiosResponse, type AxiosError, type AxiosInstance } from 'axios'
 import { error as MessageError } from '@/components'
 import {License} from "@/models";
+import { useAtomValue} from "jotai";
+import { secretStorageAtom} from "@/stores";
 
 export interface Config {
     port: number
@@ -161,8 +163,7 @@ function responseError(error: AxiosError) {
             message = '网络好像出现问题哦'
         }
     }
-    const config = error?.config as AxiosRequestConfig
-    MessageError(message)
+    MessageError(message, 3000)
     return Promise.reject(error)
 }
 
@@ -269,8 +270,29 @@ export class ServiceClient {
             baseURL: url,
         })
 
+        const serialKey =  useAtomValue(secretStorageAtom)
         // 添加请求拦截器
-        instance.interceptors.request.use((config) => config, requestConfigError)
+        instance.interceptors.request.use((config) => {
+
+            console.log(serialKey)
+
+            if(serialKey) {
+                const { data, params } = config
+               if(data) {
+                   config.data = {
+                       serialKey,
+                       ...data,
+                   }
+               }else {
+                   console.log(params)
+                   // config.params = {
+                   //     serialKey,
+                   //     ...data,
+                   // }
+               }
+            }
+            return config
+        }, requestConfigError)
 
         // 添加响应拦截器
         instance.interceptors.response.use(responseAdaptor, responseError)

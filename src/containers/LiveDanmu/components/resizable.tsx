@@ -1,7 +1,8 @@
 import React, {forwardRef, useState} from "react";
 import {Table} from "@arco-design/web-react";
 import {Resizable} from 'react-resizable';
-import {openRightMenu} from './rightMenu'
+import {MenuListType, openRightMenu} from './rightMenu'
+import {ConnectEnum} from "@/containers/LiveDanmu";
 
 
 
@@ -53,6 +54,7 @@ interface ResizeAbelProps {
     tableOriginal: Record<string, any> // 组件库table原生支持的props,不包括columns和data
     columns:any[]
     data:any[]
+    openRightMenu: (menuItem: MenuListType, record) => void;
 }
 
 export const ResizeAbel: React.FC = (props: ResizeAbelProps) => {
@@ -83,10 +85,18 @@ export const ResizeAbel: React.FC = (props: ResizeAbelProps) => {
             onRow={(record, index) => {
                 return {
                     onContextMenu: (event) => {
-                        console.log(123123, event, record)
-                        openRightMenu(event.clientX,event.clientY)
+                        openRightMenu(event.clientX,event.clientY, record, (menuItem) => {
+                            console.log('右键点击事件',menuItem, record)
+                            props.openRightMenu(menuItem, {...record, index})
+                        })
                     },
                 };
+            }}
+            rowClassName={(record) => {
+                console.log(record, 12312)
+                if(record.connectStatus === ConnectEnum['正在抓取']) {
+                    return 'is-connecting'
+                }
             }}
             className='table-demo-resizable-column'
             size='mini'

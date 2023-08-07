@@ -53,7 +53,6 @@ export default function ExternalController () {
 
     async function getLicense(licenseCode) {
         try {
-            setLoading(true)
             const resp = await client.getActiveCodeTime(licenseCode as string)
             // 过期打开弹窗，否则关闭弹窗
             setLoading(false)
@@ -65,12 +64,14 @@ export default function ExternalController () {
             setIdentityIsShow(!!isExpired)
             setLicense(resp.data ?? {})
         }catch (e) {
-            console.log(e.message)
             setErr(e.message)
             setLoading(false)
         }
     }
 
+    useEffect(() => {
+        setLoading(true)
+    }, [])
     return (
         <>
             <Loading visible={isLoading} />

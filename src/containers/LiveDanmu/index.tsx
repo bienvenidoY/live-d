@@ -29,11 +29,15 @@ import * as XLSX from 'xlsx'
 import {ResizeAbel} from './components/resizable'
 import {useServiceClient} from "@/stores";
 
-enum LiveStatsType {
-    '开播' = 2,
-    '关播' = 4
+export enum LiveStatsType {
+    '正在直播' = 2,
+    '未开播' = 4
 }
 
+export enum ConnectEnum {
+    '未抓取' = 0,
+    '正在抓取' = 1
+}
 
 const columns = [
     {
@@ -45,25 +49,37 @@ const columns = [
         title: '房间标题',
         dataIndex: 'roomTitle',
         width: 140,
-        fixed: 'left',
+        render: (col, item) => {
+            return <Typography.Paragraph ellipsis={{
+                rows: 1, showTooltip: true,
+                wrapper: 'span',
+            }} style={{ marginBottom: 0 }}>
+                {item.roomTitle ?? '--'}
+            </Typography.Paragraph>
+        }
     },
     {
         title: '主播昵称',
         dataIndex: 'nickname',
         width: 100,
         render: (col, item) => {
-            return <Typography.Paragraph ellipsis={{rows: 1, showTooltip: true, wrapper: 'span'}}>
-                {item.salary}
+            return <Typography.Paragraph
+              ellipsis={{
+                  rows: 1, showTooltip: true,
+                  wrapper: 'span',
+              }} style={{ marginBottom: 0 }}
+            >
+                {item.nickname ?? '--'}
             </Typography.Paragraph>
         }
     },
     {
         title: '开播状态',
-        dataIndex: 'status',
+        dataIndex: 'roomStatus',
         render: (col, item) => {
             return <>
                 {/* 2开播 4关播 */}
-                { LiveStatsType[LiveStatsType['开播']] === item.status ? LiveStatsType['开播'] : LiveStatsType['关播'] }
+                { LiveStatsType['正在直播'] === item.roomStatus ?  LiveStatsType[LiveStatsType['正在直播']] :  LiveStatsType[LiveStatsType['未开播']] }
             </>
         }
     },
@@ -78,29 +94,26 @@ const columns = [
     },
     {
         title: '喜欢',
-        dataIndex: 'likeCount',
+        dataIndex: 'likeCountStr',
     },
     {
         title: '抓取状态',
         dataIndex: 'email3',
+        render: (col, item) => {
+            console.log('ssss',  ConnectEnum['正在抓取'] ,  item.connectStatus)
+            return <>
+                { ConnectEnum['正在抓取'] === item.connectStatus ? ConnectEnum[ConnectEnum['正在抓取']] :  ConnectEnum[ConnectEnum['未抓取']]   }
+            </>
+        }
     },
 ];
-const data = Array(100000)
-    .fill('')
-    .map((_, index) => ({
-        key: `${index}`,
-        name: `Kevin ${index}`,
-        salary: 22000,
-        address: `${index} Park Road, London`,
-        email: `kevin.sandra_${index}@example.com`,
-        email1: `kevin.sandra_${index}@example.com`,
-    }));
-
 
 interface SearchHeaderProps {
     onAddLive: (liveUrlList: string[]) => void
     setTableValues: (list: any[]) => void
-    clearLiveList: () => void
+    clearAllLive: () => void
+    setLiveRoomList: (val: any) => void
+    liveRoomList: []
 }
 
 const SearchHeader: React.FC = (props: SearchHeaderProps) => {
@@ -130,7 +143,7 @@ const SearchHeader: React.FC = (props: SearchHeaderProps) => {
         // TODO 清空输入框
         liveUrl && setLiveUrl('')
         // TODO 清空直播列表
-        props.clearLiveList()
+        props.clearAllLive()
         // TODO 清空用户评论列表
         // TODO 清空二维码信息
     }
@@ -212,6 +225,11 @@ const SearchHeader: React.FC = (props: SearchHeaderProps) => {
 
     function startAll() {
         // TODO 连接所有直播列表中ws
+        const liveRoomList = props.liveRoomList.map(v => {
+            v.connectStatus = ConnectEnum['正在直播']
+            return v
+        })
+        props.setLiveRoomList(liveRoomList)
     }
 
     function endAll() {
@@ -260,9 +278,36 @@ const SearchHeader: React.FC = (props: SearchHeaderProps) => {
 interface LiveRoomTableProps {
     liveRoomList: typeof columns[]
     setLiveRoomList: (val: any) => void
+    startConnect: (val: any) => void
+    stopConnect: (val: any) => void
+    removeLive: (val: any) => void
+    exportLive: () => void
+    clearAllLive: () => void
 }
 
 const LiveRoomTable: React.FC = (props: LiveRoomTableProps) => {
+    function openRightMenu(menuItem, record) {
+        /*
+        *   {type: 'start', text: '抓取',},
+        {type: 'stop', text: '停止',},
+        {type: 'openLive', text: '打开直播间',},
+        {type: 'remove', text: '删除直播间',},
+        {type: 'export', text: '导出所有直播间',},
+        {type: 'clearAll', text: '清空',},
+        * */
+        if(menuItem.type === 'start') {
+            props.startConnect(record)
+        }else if(menuItem.type === 'stop'){
+            props.stopConnect(record)
+        }else if(menuItem.type === 'remove'){
+            props.removeLive(record)
+        }else if(menuItem.type === 'export'){
+            props.exportLive()
+        }else if(menuItem.type === 'clearAll'){
+            props.clearAllLive()
+        }
+    }
+
     return (
         <Row>
             <Col span={16}>
@@ -270,6 +315,7 @@ const LiveRoomTable: React.FC = (props: LiveRoomTableProps) => {
                     <ResizeAbel
                         columns={columns}
                         data={props.liveRoomList}
+                        openRightMenu={openRightMenu}
                     />
                 </div>
             </Col>
@@ -514,9 +560,41 @@ const LiveDanmuPage = () => {
         })
     }
 
-    function clearLiveList() {
+    function clearAllLive() {
         // 断开ws
         setLiveRoomList([])
+    }
+
+    function startConnect(record) {
+        console.log( '开始',record)
+        const list = liveRoomList.map((v, i) => {
+            if(i === record.index)  {
+                return {
+                    ...record,
+                    connectStatus: ConnectEnum['正在抓取'],
+                }
+            }
+            return v
+        })
+        setLiveRoomList(list)
+    }
+    function stopConnect(record) {
+        const list = liveRoomList.map((v, i) => {
+            if(i === record.index)  {
+                return {
+                    ...record,
+                    connectStatus: ConnectEnum['未抓取'],
+                }
+            }
+            return v
+        })
+        setLiveRoomList(list)
+    }
+    function exportLive() {
+
+    }
+    function removeLive() {
+
     }
 
     return <div className="page">
@@ -524,9 +602,17 @@ const LiveDanmuPage = () => {
             <Card>
                 <SearchHeader onAddLive={addLive}
                               setTableValues={setTableValues}
-                              clearLiveList={clearLiveList}
+                              clearAllLive={clearAllLive}
+                              liveRoomList={liveRoomList}
+                              setLiveRoomList={setLiveRoomList}
                 />
-                <LiveRoomTable liveRoomList={liveRoomList} setLiveRoomList={setLiveRoomList}/>
+                <LiveRoomTable liveRoomList={liveRoomList}
+                               startConnect={startConnect}
+                               stopConnect={stopConnect}
+                               exportLive={exportLive}
+                               removeLive={removeLive}
+                               clearAllLive={clearAllLive}
+                               setLiveRoomList={setLiveRoomList}/>
             </Card>
             <Row>
                 <Col span={24}>

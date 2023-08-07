@@ -12,3 +12,19 @@
   cursor: col-resize;
   z-index: 1;
 }
+.is-connecting:hover {
+  .arco-table-td {
+    background: rgb(var(--success-5))!important;
+  }
+  .arco-table-hover .arco-table-tr:not(.arco-table-empty-row):hover
+  .arco-table-td.arco-table-col-fixed-left::before,
+  .arco-table-hover .arco-table-tr:not(.arco-table-empty-row):hover
+  .arco-table-td.arco-table-col-fixed-right::before{
+    background: rgb(var(--success-5))!important;
+  }
+
+}
+
+.is-connecting .arco-table-td  {
+  background: rgb(var(--success-5))
+}
