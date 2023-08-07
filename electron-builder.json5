@@ -29,8 +29,8 @@
     ],
     "artifactName": "${productName}_${version}.${ext}"
   },
-  "extraResources": [
-    { "from": "./extraResources/", "to": ".", "filter": ["*.exe"] },
+  extraFiles: [
+    "./extraResources/douyin.proto",
   ],
   "nsis": {
     "oneClick": false,

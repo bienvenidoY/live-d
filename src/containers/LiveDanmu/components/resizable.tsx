@@ -93,7 +93,6 @@ export const ResizeAbel: React.FC = (props: ResizeAbelProps) => {
                 };
             }}
             rowClassName={(record) => {
-                console.log(record, 12312)
                 if(record.connectStatus === ConnectEnum['正在抓取']) {
                     return 'is-connecting'
                 }

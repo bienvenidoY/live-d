@@ -28,6 +28,9 @@ import {validURL} from "@/lib/validate";
 import * as XLSX from 'xlsx'
 import {ResizeAbel} from './components/resizable'
 import {useServiceClient} from "@/stores";
+import {StreamReader} from "@/lib/streamer";
+import {Log} from "@/models/Log";
+import {ipcRenderer} from "electron";
 
 export enum LiveStatsType {
     '正在直播' = 2,
@@ -69,7 +72,7 @@ const columns = [
                   wrapper: 'span',
               }} style={{ marginBottom: 0 }}
             >
-                {item.nickname ?? '--'}
+                {item.owner?.nickname ?? '--'}
             </Typography.Paragraph>
         }
     },
@@ -100,7 +103,6 @@ const columns = [
         title: '抓取状态',
         dataIndex: 'email3',
         render: (col, item) => {
-            console.log('ssss',  ConnectEnum['正在抓取'] ,  item.connectStatus)
             return <>
                 { ConnectEnum['正在抓取'] === item.connectStatus ? ConnectEnum[ConnectEnum['正在抓取']] :  ConnectEnum[ConnectEnum['未抓取']]   }
             </>
@@ -565,8 +567,7 @@ const LiveDanmuPage = () => {
         setLiveRoomList([])
     }
 
-    function startConnect(record) {
-        console.log( '开始',record)
+    async function startConnect(record) {
         const list = liveRoomList.map((v, i) => {
             if(i === record.index)  {
                 return {
@@ -576,6 +577,7 @@ const LiveDanmuPage = () => {
             }
             return v
         })
+        await ipcRenderer.invoke('createSocket', {...record.wsData, liveId: record.id})
         setLiveRoomList(list)
     }
     function stopConnect(record) {
@@ -593,8 +595,15 @@ const LiveDanmuPage = () => {
     function exportLive() {
 
     }
-    function removeLive() {
-
+    function removeLive(record) {
+        // 如果开播时关闭
+        if(record.connectStatus === ConnectEnum['正在抓取']) {
+            // 断开ws
+        }
+        const {index} = record
+        const list = [...liveRoomList]
+        list.splice(index, 1)
+        setLiveRoomList(list)
     }
 
     return <div className="page">

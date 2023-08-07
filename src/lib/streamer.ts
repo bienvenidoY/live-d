@@ -1,4 +1,6 @@
 import EventEmitter from 'eventemitter3'
+import { io } from "socket.io-client";
+
 import { type SetRequired } from 'type-fest'
 
 export interface Config {
@@ -19,6 +21,8 @@ export class StreamReader<T> {
     protected innerBuffer: T[] = []
 
     protected url = ''
+    protected cookie = ''
+    protected userAgent = ''
 
     protected connection: WebSocket | null = null
 
@@ -59,11 +63,14 @@ export class StreamReader<T> {
         })
     }
 
-    connect (url: string) {
-        if (this.url === url && this.connection) {
+    connect (wsData) {
+        const { wsUrl, wsCookie, wsUserAgent } = wsData
+        if (this.url === wsUrl && this.connection) {
             return
         }
-        this.url = url
+        this.url = wsUrl
+        this.cookie = wsCookie
+        this.userAgent = wsUserAgent
         this.connection?.close()
         this.connectWebsocket()
     }

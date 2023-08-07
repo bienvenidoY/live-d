@@ -15,7 +15,7 @@ export default function ExternalController () {
     const [value, set] = useObject({
         licenseCode: '',
     })
-    const [defaultSecret, setSecret] = useState('')
+    const [defaultSecret, setSecret] = useAtom(secretStorageAtom)
 
 
     const [isLoading, setLoading] = useState(false)
@@ -27,6 +27,7 @@ export default function ExternalController () {
             setIdentityIsShow(true)
             return
         }
+        setSecret(licenseCode)
         await getLicense(licenseCode)
     })
 
