@@ -12,7 +12,9 @@ import {
     Checkbox,
     Card,
     Notification,
-    Drawer
+    Drawer,
+    Select,
+    Divider,
 } from '@arco-design/web-react';
 
 const CheckboxGroup = Checkbox.Group;
@@ -27,6 +29,12 @@ import * as XLSX from 'xlsx'
 import {ResizeAbel} from './components/resizable'
 import {useServiceClient} from "@/stores";
 
+enum LiveStatsType {
+    '开播' = 2,
+    '关播' = 4
+}
+
+
 const columns = [
     {
         title: '序号',
@@ -35,13 +43,13 @@ const columns = [
     },
     {
         title: '房间标题',
-        dataIndex: 'name',
+        dataIndex: 'roomTitle',
         width: 140,
         fixed: 'left',
     },
     {
         title: '主播昵称',
-        dataIndex: 'salary',
+        dataIndex: 'nickname',
         width: 100,
         render: (col, item) => {
             return <Typography.Paragraph ellipsis={{rows: 1, showTooltip: true, wrapper: 'span'}}>
@@ -51,20 +59,26 @@ const columns = [
     },
     {
         title: '开播状态',
-        dataIndex: 'address',
+        dataIndex: 'status',
         render: (col, item) => {
-            return <Typography.Paragraph ellipsis={{rows: 1, showTooltip: true, wrapper: 'span'}}>
-                {item.address}
-            </Typography.Paragraph>
+            return <>
+                {/* 2开播 4关播 */}
+                { LiveStatsType[LiveStatsType['开播']] === item.status ? LiveStatsType['开播'] : LiveStatsType['关播'] }
+            </>
         }
     },
     {
         title: '在线/观看',
-        dataIndex: 'email1',
+        dataIndex: 'total',
+        render: (col, item) => {
+            return <>
+                { item.userCountStr }/ {item.totalUserStr}
+            </>
+        }
     },
     {
         title: '喜欢',
-        dataIndex: 'email2',
+        dataIndex: 'likeCount',
     },
     {
         title: '抓取状态',
@@ -86,6 +100,7 @@ const data = Array(100000)
 interface SearchHeaderProps {
     onAddLive: (liveUrlList: string[]) => void
     setTableValues: (list: any[]) => void
+    clearLiveList: () => void
 }
 
 const SearchHeader: React.FC = (props: SearchHeaderProps) => {
@@ -113,10 +128,13 @@ const SearchHeader: React.FC = (props: SearchHeaderProps) => {
         // 断开所有直播状态
         endAll()
         // TODO 清空输入框
+        liveUrl && setLiveUrl('')
         // TODO 清空直播列表
+        props.clearLiveList()
         // TODO 清空用户评论列表
         // TODO 清空二维码信息
     }
+
 
     function handleUploadFile() {
         // 获取导入的内容
@@ -211,6 +229,7 @@ const SearchHeader: React.FC = (props: SearchHeaderProps) => {
                    onChange={(value) => {
                        setLiveUrl(value)
                    }}
+                   allowClear
             />
             <Button type='secondary' onClick={clearAll}>
                 清空所有
@@ -255,15 +274,15 @@ const LiveRoomTable: React.FC = (props: LiveRoomTableProps) => {
                 </div>
             </Col>
             <Col span={8}>
-                <Space size='large' align='center' style={{margin: 24}}>
+                <Space direction='vertical' style={{margin: '0 24px'}}>
+                    <Typography.Text bold>二维码</Typography.Text>
+
                     <Image
                         width={250}
                         height={250}
                         src='some-error.png'
                         alt='未选择用户'
                     />
-                    <div style={{height: 300, width: 1}}>
-                    </div>
                 </Space>
             </Col>
         </Row>
@@ -282,7 +301,12 @@ const options = [
     {label: '自动抓取', value: 8, defaultChecked: true},
     {label: '解析完整信息(需要代理,采集速度会变慢)', value: 9, defaultChecked: false},
 ]
-const UserTableOptions: React.FC = () => {
+
+interface UserTableOptionsProps {
+    livePendingOptions: []
+}
+
+const UserTableOptions: React.FC = (props: UserTableOptionsProps) => {
     const {
         selected,
         setSelected,
@@ -298,9 +322,28 @@ const UserTableOptions: React.FC = () => {
         setSelected(v)
     }
 
+
     return (
         <div>
-            <CheckboxGroup value={selected} options={options} onChange={onChange}/>
+            <Space>
+                <Select
+                  addBefore='直播间'
+                  placeholder='请选择直播间'
+                  showSearch
+                  style={{ width: 300 }}
+                  onChange={(value) =>
+                    console.log(123)
+                  }
+                >
+                    {props.livePendingOptions.map((option, index) => (
+                      <Option key={option} value={option}>
+                          {option.roomTitle}
+                      </Option>
+                    ))}
+                </Select>
+                <Button>保存Excel</Button>
+                <CheckboxGroup value={selected} options={options} onChange={onChange}/>
+            </Space>
         </div>
     );
 }
@@ -375,8 +418,12 @@ const userColumns = [
         dataIndex: 'email8',
     },
     {
-        title: '私密账号9',
-        dataIndex: 'email',
+        title: '私密账号',
+        dataIndex: 'email9',
+    },
+    {
+        title: '手机号',
+        dataIndex: 'email10',
     },
 ];
 const userData = Array(100000)
@@ -396,6 +443,7 @@ const userData = Array(100000)
         email7: `kevin.sandra_${index}@example.com`,
         email8: `kevin.sandra_${index}@example.com`,
         email9: `kevin.sandra_${index}@example.com`,
+        email10: `kevin.sandra_${index}@example.com`,
     }));
 
 
@@ -445,6 +493,7 @@ const LiveDanmuPage = () => {
     const [liveRoomList, setLiveRoomList] = useState([])
     const [drawerShow, setDrawerShow] = useState(false)
     const [tableValues, setTableValues] = useState([])
+    const [livePendingOptions, setLivePendingOptions] = useState([])
     const client = useServiceClient()
 
 
@@ -457,21 +506,33 @@ const LiveDanmuPage = () => {
 
     function addLive(liveUrlList: string[]) {
         client.getRoomInfo(liveUrlList).then(res=>{
-            setLiveRoomList(data.slice(0, 100))
+            const { roomInfo } = res.data
+            setLiveRoomList([
+              ...liveRoomList,
+              ...roomInfo
+            ])
         })
+    }
+
+    function clearLiveList() {
+        // 断开ws
+        setLiveRoomList([])
     }
 
     return <div className="page">
         <Space size={16} direction="vertical" style={{width: '100%'}}>
             <Card>
-                <SearchHeader onAddLive={addLive} setTableValues={setTableValues}/>
+                <SearchHeader onAddLive={addLive}
+                              setTableValues={setTableValues}
+                              clearLiveList={clearLiveList}
+                />
                 <LiveRoomTable liveRoomList={liveRoomList} setLiveRoomList={setLiveRoomList}/>
             </Card>
             <Row>
                 <Col span={24}>
                     <Card>
                         <Space size={8} direction="vertical" style={{width: '100%'}}>
-                            <UserTableOptions/>
+                            <UserTableOptions livePendingOptions={livePendingOptions}/>
                             <UserTable/>
                         </Space>
                     </Card>
