@@ -54,7 +54,7 @@ interface ResizeAbelProps {
     tableOriginal: Record<string, any> // 组件库table原生支持的props,不包括columns和data
     columns:any[]
     data:any[]
-    openRightMenu: (menuItem: MenuListType, record) => void;
+    openRightMenu: (menuItem: MenuListType, record,  index: number) => void;
     rowMap:Record<string, (event:any)=>void>
 }
 
@@ -88,7 +88,7 @@ export const ResizeAbel: React.FC = (props: ResizeAbelProps) => {
                     onContextMenu: (event) => {
                         openRightMenu(event.clientX,event.clientY, record, (menuItem) => {
                             console.log('右键点击事件',menuItem, record)
-                            props.openRightMenu(menuItem, {...record, index})
+                            props.openRightMenu(menuItem, record, index)
                         })
                     },
                     onClick:()=>{

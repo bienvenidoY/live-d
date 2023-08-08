@@ -56,6 +56,7 @@ interface ResizeAbelProps {
     data:any[]
     openRightMenu: (menuItem: MenuListType, record) => void;
     rowMap:Record<string, (event:any)=>void>
+    onUserClick:(record) => void
 }
 
 export const ResizeAbel: React.FC = (props: ResizeAbelProps) => {
@@ -93,7 +94,7 @@ export const ResizeAbel: React.FC = (props: ResizeAbelProps) => {
                         console.log('右键')
                     },
                     onClick:()=>{
-                        props.rowMap.onClick(record)
+                        props.onUserClick(record)
                     }
                 };
             }}

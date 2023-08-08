@@ -121,7 +121,10 @@ interface SearchHeaderProps {
     setTableValues: (list: any[]) => void
     clearAllLive: () => void
     setLiveRoomList: (val: any) => void
+    setUserData: (val: any) => void
     liveRoomList: []
+    startAll: () => void
+    stopAll: () => void
 }
 
 const SearchHeader: React.FC = (props: SearchHeaderProps) => {
@@ -145,17 +148,12 @@ const SearchHeader: React.FC = (props: SearchHeaderProps) => {
         props.onAddLive([liveUrl])
     }
 
-    function clearAll() {
-        // 断开所有直播状态
-        endAll()
-        // TODO 清空输入框
+    async function clearAll() {
+        // 清空输入框
         liveUrl && setLiveUrl('')
-        // TODO 清空直播列表
-        props.clearAllLive()
-        // TODO 清空用户评论列表
-        // TODO 清空二维码信息
-    }
 
+        props.clearAllLive()
+    }
 
     function handleUploadFile() {
         // 获取导入的内容
@@ -231,21 +229,8 @@ const SearchHeader: React.FC = (props: SearchHeaderProps) => {
         })
     }
 
-    function startAll() {
-        // TODO 连接所有直播列表中ws
-        const liveRoomList = props.liveRoomList.map(v => {
-            v.connectStatus = ConnectEnum['正在直播']
-            return v
-        })
-        props.setLiveRoomList(liveRoomList)
-    }
-
-    function endAll() {
-        // TODO 断开所有直播列表中ws
-    }
-
     function saveExcelFile() {
-        // TODO 断开所有直播列表中ws
+        // TODO 导出所有直播列表中ws
     }
 
     return (<div style={{marginBottom: 16}}>
@@ -266,10 +251,10 @@ const SearchHeader: React.FC = (props: SearchHeaderProps) => {
             <Button type='secondary' onClick={uploadExcelFile}>
                 导入
             </Button>
-            <Button type='secondary' onClick={startAll}>
+            <Button type='secondary' onClick={props.startAll}>
                 全部开始
             </Button>
-            <Button type='secondary' onClick={endAll}>
+            <Button type='secondary' onClick={props.stopAll}>
                 全部结束
             </Button>
             <Button type='secondary' onClick={saveExcelFile}>
@@ -295,24 +280,24 @@ interface LiveRoomTableProps {
 }
 
 const LiveRoomTable: React.FC = (props: LiveRoomTableProps) => {
-    function openRightMenu(menuItem, record) {
+    function openRightMenu(menuItem, record, index) {
         /*
         *   {type: 'start', text: '抓取',},
         {type: 'stop', text: '停止',},
-        {type: 'openLive', text: '打开直播间',},
+        {type: 'openLive', text: '打开直播间',},https://live.douyin.com/229175459221
         {type: 'remove', text: '删除直播间',},
         {type: 'export', text: '导出所有直播间',},
         {type: 'clearAll', text: '清空',},
         * */
-        if (menuItem.type === 'start') {
-            props.startConnect(record)
-        } else if (menuItem.type === 'stop') {
-            props.stopConnect(record)
-        } else if (menuItem.type === 'remove') {
-            props.removeLive(record)
-        } else if (menuItem.type === 'export') {
+        if(menuItem.type === 'start') {
+            props.startConnect(record, index)
+        }else if(menuItem.type === 'stop'){
+            props.stopConnect(record, index)
+        }else if(menuItem.type === 'remove'){
+            props.removeLive(record, index)
+        }else if(menuItem.type === 'export'){
             props.exportLive()
-        } else if (menuItem.type === 'clearAll') {
+        }else if(menuItem.type === 'clearAll'){
             props.clearAllLive()
         }
     }
@@ -330,7 +315,7 @@ const LiveRoomTable: React.FC = (props: LiveRoomTableProps) => {
             </Col>
             <Col span={8}>
                 <Space direction='vertical' style={{margin: '0 24px'}}>
-                    <Typography.Text bold>二维码-{props.shareQrCodeData.nickname}</Typography.Text>
+                    <Typography.Text bold>二维码-【用户昵称：{props.shareQrCodeData.nickname}】</Typography.Text>
 
                     <Image
                         width={250}
@@ -535,17 +520,16 @@ interface UserTableProps {
 const UserTable: React.FC = (props: UserTableProps) => {
     const client = useServiceClient()
 
-    const onClick = (item) => {
+    const onUserClick = (item) => {
+        console.log(item)
         client.getUserprofile(item.user.secUid).then(res => {
-            const {data: {share_info: {share_qrcode_url: {url_list=[]}}}} = res
-            props.setShareQrCodeData(() => {
-                console.log('wozhixingle')
-                return{
-                    url: url_list[0] || '',
-                    nickname: item.user.nickName || ''
-                }
-            })
-        }).catch(err => {
+            const share_qrcode_url = res?.data?.share_info?.share_qrcode_url ?? {}
+            const {url_list = []} = share_qrcode_url
+            props.setShareQrCodeData(() => ({
+                url: url_list[0] ?? '',
+                nickname: item.user.nickName ?? ''
+            }))
+        }).catch(() => {
 
         })
     }
@@ -553,9 +537,7 @@ const UserTable: React.FC = (props: UserTableProps) => {
         <ResizeAbelUser
             columns={userColumns}
             data={props.userData}
-            rowMap={{
-                onClick
-            }}
+            onUserClick={onUserClick}
         />
     </div>
 }
@@ -625,9 +607,12 @@ const LiveDanmuPage = () => {
             if (Array.isArray(roomInfo)) {
                 setLiveRoomList([
                     ...liveRoomList,
-                    ...roomInfo
+                    ...roomInfo.map(v => {
+                        v.connectStatus = ConnectEnum['未抓取']
+                        return v
+                    })
                 ])
-            } else {
+            }else {
                 Notification.warning({
                     content: '直播间已关闭',
                 })
@@ -635,22 +620,55 @@ const LiveDanmuPage = () => {
         })
     }
 
-    function clearAllLive() {
-        // 断开ws
+    async function clearAllLive() {
+        // 断开所有直播状态
+        await stopAll()
+        // 清空直播列表
         setLiveRoomList([])
+        // 清空用户评论列表
         setUserData([])
+        // 清空二维码信息
+        setShareQrCodeData({url: '', nickname: ''})
     }
 
-    async function startConnect(record) {
-        const list = liveRoomList.map((v, i) => {
-            if (i === record.index) {
-                return {
-                    ...record,
-                    connectStatus: ConnectEnum['正在抓取'],
-                }
-            }
-            return v
-        })
+    async function startAll() {
+        const list = liveRoomList.filter(obj => obj.connectStatus === ConnectEnum['未抓取'])
+        if(!liveRoomList.length) {
+            Notification.warning({
+                content: '还未导入直播间',
+            })
+            return
+        }
+        if(!list.length) {
+            Notification.warning({
+                content: '列表中直播间已全部开始',
+            })
+            return
+        }
+        for (const record of list) {
+            await startConnect(record);
+        }
+    }
+    async function stopAll() {
+        const list = liveRoomList.filter(obj => obj.connectStatus === ConnectEnum['正在抓取'])
+        if(!list.length) {
+            Notification.warning({
+                content: '没有可以终止的直播间',
+            })
+            return
+        }
+        for (const record of list) {
+            await stopConnect(record);
+        }
+    }
+    async function startConnect(record, index?: number) {
+        const list = [...liveRoomList]
+        const recordIndex = index ?? list.findIndex(v => v.roomUrl === record.roomUrl)
+        console.log(recordIndex)
+        if(recordIndex> -1) {
+            list[recordIndex].connectStatus = ConnectEnum['正在抓取']
+        }
+
         const handleMessage = (event, data) => {
             setUserData((prevUserData) => {
                 return [...prevUserData, ...data];
@@ -662,32 +680,25 @@ const LiveDanmuPage = () => {
         ipcRenderer.on('data-response', handleMessage);
         setLiveRoomList(list)
     }
-
-    async function stopConnect(record) {
-        const list = liveRoomList.map((v, i) => {
-            if (i === record.index) {
-                return {
-                    ...record,
-                    connectStatus: ConnectEnum['未抓取'],
-                }
-            }
-            return v
-        })
+    async function stopConnect(record, index?) {
+        const list = [...liveRoomList]
+        const recordIndex = index ?? list.findIndex(v => v.roomUrl === record.roomUrl)
+        if(recordIndex> -1) {
+            list[recordIndex].connectStatus = ConnectEnum['未抓取']
+        }
 
         await ipcRenderer.invoke('closeSocket', record.id)
         setLiveRoomList(list)
     }
-
     function exportLive() {
 
     }
-
-    function removeLive(record) {
+    async function removeLive(record, index) {
         // 如果开播时关闭
         if (record.connectStatus === ConnectEnum['正在抓取']) {
             // 断开ws
+            await stopConnect(record, index)
         }
-        const {index} = record
         const list = [...liveRoomList]
         list.splice(index, 1)
         setLiveRoomList(list)
@@ -701,6 +712,9 @@ const LiveDanmuPage = () => {
                               clearAllLive={clearAllLive}
                               liveRoomList={liveRoomList}
                               setLiveRoomList={setLiveRoomList}
+                              startAll={startAll}
+                              stopAll={stopAll}
+                              setUserData={setUserData}
                 />
                 <LiveRoomTable liveRoomList={liveRoomList}
                                startConnect={startConnect}
