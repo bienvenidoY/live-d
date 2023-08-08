@@ -18,6 +18,7 @@ import {
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc';
 import 'dayjs/locale/zh-cn'
+
 dayjs.locale('zh-cn') // use local
 
 dayjs.extend(utc);
@@ -60,7 +61,7 @@ const columns = [
             return <Typography.Paragraph ellipsis={{
                 rows: 1, showTooltip: true,
                 wrapper: 'span',
-            }} style={{ marginBottom: 0 }}>
+            }} style={{marginBottom: 0}}>
                 {item.roomTitle ?? '--'}
             </Typography.Paragraph>
         }
@@ -71,10 +72,10 @@ const columns = [
         width: 100,
         render: (col, item) => {
             return <Typography.Paragraph
-              ellipsis={{
-                  rows: 1, showTooltip: true,
-                  wrapper: 'span',
-              }} style={{ marginBottom: 0 }}
+                ellipsis={{
+                    rows: 1, showTooltip: true,
+                    wrapper: 'span',
+                }} style={{marginBottom: 0}}
             >
                 {item.owner?.nickname ?? '--'}
             </Typography.Paragraph>
@@ -86,7 +87,7 @@ const columns = [
         render: (col, item) => {
             return <>
                 {/* 2开播 4关播 */}
-                { LiveStatsType['正在直播'] === item.roomStatus ?  LiveStatsType[LiveStatsType['正在直播']] :  LiveStatsType[LiveStatsType['未开播']] }
+                {LiveStatsType['正在直播'] === item.roomStatus ? LiveStatsType[LiveStatsType['正在直播']] : LiveStatsType[LiveStatsType['未开播']]}
             </>
         }
     },
@@ -95,7 +96,7 @@ const columns = [
         dataIndex: 'total',
         render: (col, item) => {
             return <>
-                { item.userCountStr }/ {item.totalUserStr}
+                {item.userCountStr}/ {item.totalUserStr}
             </>
         }
     },
@@ -108,7 +109,7 @@ const columns = [
         dataIndex: 'email3',
         render: (col, item) => {
             return <>
-                { ConnectEnum['正在抓取'] === item.connectStatus ? ConnectEnum[ConnectEnum['正在抓取']] :  ConnectEnum[ConnectEnum['未抓取']]   }
+                {ConnectEnum['正在抓取'] === item.connectStatus ? ConnectEnum[ConnectEnum['正在抓取']] : ConnectEnum[ConnectEnum['未抓取']]}
             </>
         }
     },
@@ -224,7 +225,7 @@ const SearchHeader: React.FC = (props: SearchHeaderProps) => {
                 })
             })
             props.setTableValues([successList, errList])
-            props.onAddLive(successList.map(item=>item[Object.keys(item)[0]]))
+            props.onAddLive(successList.map(item => item[Object.keys(item)[0]]))
             console.log(errList, successList, 123123123)
         })
     }
@@ -289,6 +290,7 @@ interface LiveRoomTableProps {
     removeLive: (val: any) => void
     exportLive: () => void
     clearAllLive: () => void
+    shareQrCodeData: { url: string, nickname: string }
 }
 
 const LiveRoomTable: React.FC = (props: LiveRoomTableProps) => {
@@ -301,19 +303,20 @@ const LiveRoomTable: React.FC = (props: LiveRoomTableProps) => {
         {type: 'export', text: '导出所有直播间',},
         {type: 'clearAll', text: '清空',},
         * */
-        if(menuItem.type === 'start') {
+        if (menuItem.type === 'start') {
             props.startConnect(record)
-        }else if(menuItem.type === 'stop'){
+        } else if (menuItem.type === 'stop') {
             props.stopConnect(record)
-        }else if(menuItem.type === 'remove'){
+        } else if (menuItem.type === 'remove') {
             props.removeLive(record)
-        }else if(menuItem.type === 'export'){
+        } else if (menuItem.type === 'export') {
             props.exportLive()
-        }else if(menuItem.type === 'clearAll'){
+        } else if (menuItem.type === 'clearAll') {
             props.clearAllLive()
         }
     }
 
+    console.log(props.shareQrCodeData, 123123123)
     return (
         <Row>
             <Col span={16}>
@@ -327,12 +330,12 @@ const LiveRoomTable: React.FC = (props: LiveRoomTableProps) => {
             </Col>
             <Col span={8}>
                 <Space direction='vertical' style={{margin: '0 24px'}}>
-                    <Typography.Text bold>二维码</Typography.Text>
+                    <Typography.Text bold>二维码{props.shareQrCodeData.nickname}</Typography.Text>
 
                     <Image
                         width={250}
                         height={250}
-                        src='some-error.png'
+                        src={props.shareQrCodeData.url || 'some-error.png'}
                         alt='未选择用户'
                     />
                 </Space>
@@ -379,18 +382,18 @@ const UserTableOptions: React.FC = (props: UserTableOptionsProps) => {
         <div>
             <Space>
                 <Select
-                  addBefore='直播间'
-                  placeholder='请选择直播间'
-                  showSearch
-                  style={{ width: 300 }}
-                  onChange={(value) =>
-                    console.log(123)
-                  }
+                    addBefore='直播间'
+                    placeholder='请选择直播间'
+                    showSearch
+                    style={{width: 300}}
+                    onChange={(value) =>
+                        console.log(123)
+                    }
                 >
                     {props.livePendingOptions.map((option, index) => (
-                      <Option key={option} value={option}>
-                          {option.roomTitle}
-                      </Option>
+                        <Option key={option} value={option}>
+                            {option.roomTitle}
+                        </Option>
                     ))}
                 </Select>
                 <Button>保存Excel</Button>
@@ -400,7 +403,7 @@ const UserTableOptions: React.FC = (props: UserTableOptionsProps) => {
     );
 }
 
-enum MessageMethodEnums{
+enum MessageMethodEnums {
     "WebcastGiftMessage" = '礼物:',
 }
 
@@ -427,7 +430,7 @@ const userColumns = [
         dataIndex: 'salary',
         width: 100,
         render: (col, item) => {
-            const {common: {method, describe }} = item
+            const {common: {method, describe}} = item
             return <Typography.Paragraph ellipsis={{rows: 1, showTooltip: true, wrapper: 'span'}}>
                 {MessageMethodEnums[method]}{describe}
             </Typography.Paragraph>
@@ -520,15 +523,38 @@ const userColumns = [
     },
 ];
 
+type ShareQrCodeDataType = {
+    url: string
+    nickname: string
+}
 interface UserTableProps {
-    userData: []
+    userData: [],
+    setShareQrCodeData: (val: (prev: ShareQrCodeDataType) => ShareQrCodeDataType) => void
 }
 
 const UserTable: React.FC = (props: UserTableProps) => {
+    const client = useServiceClient()
+
+    const onClick = (item) => {
+        client.getUserprofile(item.user.secUid).then(res => {
+            console.log(res, 2222, item.user.nickName)
+            const {data: {share_info: {share_qrcode_url: {url_list}}}} = res
+            props.setShareQrCodeData(() => ({
+                url: url_list[0] || '',
+                nickname: item.user.nickName || ''
+            }))
+            console.log(res, 33333, item.user.nickName)
+        }).catch(err => {
+
+        })
+    }
     return <div>
         <ResizeAbel
             columns={userColumns}
             data={props.userData}
+            rowMap={{
+                onClick
+            }}
         />
     </div>
 }
@@ -572,9 +598,10 @@ const LiveDanmuPage = () => {
     const [tableValues, setTableValues] = useState([])
     const [livePendingOptions, setLivePendingOptions] = useState([])
     const client = useServiceClient()
-    const [userData, setUserData]= useState([])
+    const [userData, setUserData] = useState([])
+    const [shareQrCodeData, setShareQrCodeData] = useState({url: '', nickname: ''})
 
-
+    console.log(shareQrCodeData, 366666)
     useEffect(() => {
         if (tableValues.length > 0) {
             setDrawerShow(true)
@@ -584,7 +611,7 @@ const LiveDanmuPage = () => {
 
     function addLive(liveUrlList: string[]) {
         // 剔除相同直播间
-        const list =  liveUrlList.filter(value => !liveRoomList.some(obj => obj.roomUrl === value));
+        const list = liveUrlList.filter(value => !liveRoomList.some(obj => obj.roomUrl === value));
 
         if (!list.length) {
             Notification.warning({
@@ -592,14 +619,14 @@ const LiveDanmuPage = () => {
             })
             return
         }
-        client.getRoomInfo(list).then(res=>{
-            const { roomInfo } = res.data
-            if(Array.isArray(roomInfo)) {
+        client.getRoomInfo(list).then(res => {
+            const {roomInfo} = res.data
+            if (Array.isArray(roomInfo)) {
                 setLiveRoomList([
                     ...liveRoomList,
                     ...roomInfo
                 ])
-            }else {
+            } else {
                 Notification.warning({
                     content: '直播间已关闭',
                 })
@@ -615,7 +642,7 @@ const LiveDanmuPage = () => {
 
     async function startConnect(record) {
         const list = liveRoomList.map((v, i) => {
-            if(i === record.index)  {
+            if (i === record.index) {
                 return {
                     ...record,
                     connectStatus: ConnectEnum['正在抓取'],
@@ -634,9 +661,10 @@ const LiveDanmuPage = () => {
         ipcRenderer.on('data-response', handleMessage);
         setLiveRoomList(list)
     }
+
     async function stopConnect(record) {
         const list = liveRoomList.map((v, i) => {
-            if(i === record.index)  {
+            if (i === record.index) {
                 return {
                     ...record,
                     connectStatus: ConnectEnum['未抓取'],
@@ -648,12 +676,14 @@ const LiveDanmuPage = () => {
         await ipcRenderer.invoke('closeSocket', record.id)
         setLiveRoomList(list)
     }
+
     function exportLive() {
 
     }
+
     function removeLive(record) {
         // 如果开播时关闭
-        if(record.connectStatus === ConnectEnum['正在抓取']) {
+        if (record.connectStatus === ConnectEnum['正在抓取']) {
             // 断开ws
         }
         const {index} = record
@@ -677,14 +707,16 @@ const LiveDanmuPage = () => {
                                exportLive={exportLive}
                                removeLive={removeLive}
                                clearAllLive={clearAllLive}
-                               setLiveRoomList={setLiveRoomList}/>
+                               setLiveRoomList={setLiveRoomList}
+                               shareQrCodeData={shareQrCodeData}
+                />
             </Card>
             <Row>
                 <Col span={24}>
                     <Card>
                         <Space size={8} direction="vertical" style={{width: '100%'}}>
                             <UserTableOptions livePendingOptions={livePendingOptions}/>
-                            <UserTable userData={userData}/>
+                            <UserTable userData={userData} setShareQrCodeData={setShareQrCodeData}/>
                         </Space>
                     </Card>
                 </Col>

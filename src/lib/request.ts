@@ -128,8 +128,8 @@ function requestConfigError(error: RequestError) {
     return Promise.reject(error)
 }
 function responseAdaptor(response: AxiosResponse<any>): Promise<AxiosResponse> {
-    const { code } = response.data
-    if (code === 200) {
+    const { code,result } = response.data
+    if (code === 200||result===1) {
         return response.data
     }
     const serverResponseCode = response.data?.code
@@ -320,5 +320,9 @@ export class ServiceClient {
         return await this.axiosClient.post<Config>('api/v1/getRoomInfo', {
             url: liveUrlList
         })
+    }
+
+    async getUserprofile (sec_uid: string[] ) {
+        return await this.axiosClient.get<Config>(`https://api.mujiwork.cn/userprofile?sec_uid=${sec_uid}`)
     }
 }
