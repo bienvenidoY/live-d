@@ -14,9 +14,13 @@ import {
     Notification,
     Drawer,
     Select,
-    Divider,
 } from '@arco-design/web-react';
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc';
+import 'dayjs/locale/zh-cn'
+dayjs.locale('zh-cn') // use local
 
+dayjs.extend(utc);
 const CheckboxGroup = Checkbox.Group;
 const useCheckbox = Checkbox.useCheckbox;
 
@@ -29,7 +33,7 @@ import * as XLSX from 'xlsx'
 import {ResizeAbel} from './components/resizable'
 import {useServiceClient} from "@/stores";
 import {StreamReader} from "@/lib/streamer";
-import {Log} from "@/models/Log";
+import Long from 'long';
 import {ipcRenderer} from "electron";
 
 export enum LiveStatsType {
@@ -396,6 +400,10 @@ const UserTableOptions: React.FC = (props: UserTableOptionsProps) => {
     );
 }
 
+enum MessageMethodEnums{
+    "WebcastGiftMessage" = '礼物:',
+}
+
 
 const userColumns = [
     {
@@ -407,24 +415,30 @@ const userColumns = [
         title: '主播昵称',
         dataIndex: 'name',
         width: 140,
-        fixed: 'left',
+        render: (col, item) => {
+            const {toUser} = item
+            return <Typography.Paragraph ellipsis={{rows: 1, showTooltip: true, wrapper: 'span'}}>
+                {toUser?.nickName}
+            </Typography.Paragraph>
+        }
     },
     {
         title: '动作',
         dataIndex: 'salary',
         width: 100,
         render: (col, item) => {
+            const {common: {method, describe }} = item
             return <Typography.Paragraph ellipsis={{rows: 1, showTooltip: true, wrapper: 'span'}}>
-                {item.salary}
+                {MessageMethodEnums[method]}{describe}
             </Typography.Paragraph>
         }
     },
     {
-        title: '礼物价值',
+        title: '礼物数量',
         dataIndex: 'address',
         render: (col, item) => {
             return <Typography.Paragraph ellipsis={{rows: 1, showTooltip: true, wrapper: 'span'}}>
-                {item.address}
+                {item?.gift?.diamondCount}
             </Typography.Paragraph>
         }
     },
@@ -432,22 +446,53 @@ const userColumns = [
         title: '动作时间',
         width: 140,
         dataIndex: '动作时间',
+        render: (col, item) => {
+            const data = item.common.createTime
+            const transValue = Long.fromBits(data.low, data.high, data.unsigned)
+            const value = transValue.toString().length === 10 ? transValue.toString() + '000' : transValue.toString()
+            return <Typography.Paragraph ellipsis={{rows: 1, showTooltip: true, wrapper: 'span'}}>
+                {dayjs.utc(+value).format('YYYY/MM/DD HH:mm:ss')}
+            </Typography.Paragraph>
+        }
     },
     {
         title: 'Uid',
         dataIndex: 'email1',
+        render: (col, item) => {
+            const data = item.user.id
+
+            const value = Long.fromBits(data.low, data.high, data.unsigned)
+            return <Typography.Paragraph ellipsis={{rows: 1, showTooltip: true, wrapper: 'span'}}>
+                {value.toString()}
+            </Typography.Paragraph>
+        }
     },
     {
         title: 'Secuid',
         dataIndex: 'email2',
+        render: (col, item) => {
+            return <Typography.Paragraph ellipsis={{rows: 1, showTooltip: true, wrapper: 'span'}}>
+                {item.user.secUid}
+            </Typography.Paragraph>
+        }
     },
     {
         title: '用户昵称',
         dataIndex: 'email3',
+        render: (col, item) => {
+            return <Typography.Paragraph ellipsis={{rows: 1, showTooltip: true, wrapper: 'span'}}>
+                {item.user.nickName}
+            </Typography.Paragraph>
+        }
     },
     {
         title: '抖音号',
         dataIndex: 'email4',
+        render: (col, item) => {
+            return <Typography.Paragraph ellipsis={{rows: 1, showTooltip: true, wrapper: 'span'}}>
+                {item.user.displayId}
+            </Typography.Paragraph>
+        }
     },
     {
         title: '性别',
@@ -474,32 +519,16 @@ const userColumns = [
         dataIndex: 'email10',
     },
 ];
-const userData = Array(100000)
-    .fill('')
-    .map((_, index) => ({
-        key: `${index}`,
-        name: `Kevin ${index}`,
-        salary: 22000,
-        address: `${index} Park Road, London`,
-        email: `kevin.sandra_${index}@example.com`,
-        email1: `kevin.sandra_${index}@example.com`,
-        email2: `kevin.sandra_${index}@example.com`,
-        email3: `kevin.sandra_${index}@example.com`,
-        email4: `kevin.sandra_${index}@example.com`,
-        email5: `kevin.sandra_${index}@example.com`,
-        email6: `kevin.sandra_${index}@example.com`,
-        email7: `kevin.sandra_${index}@example.com`,
-        email8: `kevin.sandra_${index}@example.com`,
-        email9: `kevin.sandra_${index}@example.com`,
-        email10: `kevin.sandra_${index}@example.com`,
-    }));
 
+interface UserTableProps {
+    userData: []
+}
 
-const UserTable: React.FC = () => {
+const UserTable: React.FC = (props: UserTableProps) => {
     return <div>
         <ResizeAbel
             columns={userColumns}
-            data={userData}
+            data={props.userData}
         />
     </div>
 }
@@ -543,6 +572,7 @@ const LiveDanmuPage = () => {
     const [tableValues, setTableValues] = useState([])
     const [livePendingOptions, setLivePendingOptions] = useState([])
     const client = useServiceClient()
+    const [userData, setUserData]= useState([])
 
 
     useEffect(() => {
@@ -553,18 +583,34 @@ const LiveDanmuPage = () => {
 
 
     function addLive(liveUrlList: string[]) {
-        client.getRoomInfo(liveUrlList).then(res=>{
+        // 剔除相同直播间
+        const list =  liveUrlList.filter(value => !liveRoomList.some(obj => obj.roomUrl === value));
+
+        if (!list.length) {
+            Notification.warning({
+                content: '已添加过直播间',
+            })
+            return
+        }
+        client.getRoomInfo(list).then(res=>{
             const { roomInfo } = res.data
-            setLiveRoomList([
-              ...liveRoomList,
-              ...roomInfo
-            ])
+            if(Array.isArray(roomInfo)) {
+                setLiveRoomList([
+                    ...liveRoomList,
+                    ...roomInfo
+                ])
+            }else {
+                Notification.warning({
+                    content: '直播间已关闭',
+                })
+            }
         })
     }
 
     function clearAllLive() {
         // 断开ws
         setLiveRoomList([])
+        setUserData([])
     }
 
     async function startConnect(record) {
@@ -577,10 +623,18 @@ const LiveDanmuPage = () => {
             }
             return v
         })
+        const handleMessage = (event, data) => {
+            setUserData((prevUserData) => {
+                return [...prevUserData, ...data];
+            })
+        }
+
         await ipcRenderer.invoke('createSocket', {...record.wsData, liveId: record.id})
+        await ipcRenderer.invoke('subscribe', 'data')
+        ipcRenderer.on('data-response', handleMessage);
         setLiveRoomList(list)
     }
-    function stopConnect(record) {
+    async function stopConnect(record) {
         const list = liveRoomList.map((v, i) => {
             if(i === record.index)  {
                 return {
@@ -590,6 +644,8 @@ const LiveDanmuPage = () => {
             }
             return v
         })
+
+        await ipcRenderer.invoke('closeSocket', record.id)
         setLiveRoomList(list)
     }
     function exportLive() {
@@ -628,7 +684,7 @@ const LiveDanmuPage = () => {
                     <Card>
                         <Space size={8} direction="vertical" style={{width: '100%'}}>
                             <UserTableOptions livePendingOptions={livePendingOptions}/>
-                            <UserTable/>
+                            <UserTable userData={userData}/>
                         </Space>
                     </Card>
                 </Col>

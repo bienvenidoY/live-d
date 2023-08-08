@@ -29,8 +29,8 @@
     ],
     "artifactName": "${productName}_${version}.${ext}"
   },
-  extraFiles: [
-    "./extraResources/douyin.proto",
+  "extraResources": [
+    { "from": "./extraResources/", "to": "extraResources"},
   ],
   "nsis": {
     "oneClick": false,

@@ -1,8 +1,10 @@
 import WebSocket from 'ws';
 import { app, ipcMain} from "electron";
 import protobuf from 'protobufjs'
-const path = require('path');
-
+import pako from 'pako'
+import path from 'path'
+import EventEmitter from 'eventemitter3'
+import {getMessage} from "./socket-message";
 
 function loadProtoFile(filePath) {
   return new Promise((resolve, reject) => {
@@ -21,52 +23,20 @@ let GiftMessage = '';
 let MemberMessage = '';
 let ChatMessage = '';
 
-const extraFilePath = path.join(app.getPath('userData'), 'douyin.proto');
-console.log(extraFilePath)
-
+//当前应用的目录
+const templateFilePath = app.isPackaged ? path.join(process.cwd(), '/resources/extraResources') : path.join(process.cwd(), '/extraResources')
+const extraFilePath = templateFilePath + '/douyin.proto'
 loadProtoFile(extraFilePath).then(root => {
-   PushFrame = root.lookupType("PushFrame");
-   Response = root.lookupType("Response");  // replace with your actual type
-   GiftMessage = root.lookupType("GiftMessage");
-   MemberMessage = root.lookupType("MemberMessage");
-   ChatMessage = root.lookupType("ChatMessage");
+  PushFrame = root.lookupType("PushFrame");
+  Response = root.lookupType("Response");  // replace with your actual type
+  GiftMessage = root.lookupType("GiftMessage");
+  MemberMessage = root.lookupType("MemberMessage");
+  ChatMessage = root.lookupType("ChatMessage");
 })
 
-function handleMessage(message) {
-
-  // 遍历消息列表
-  for (let msg of message.messagesList) {
-    // 根据方法处理消息
-    switch (msg.method) {
-      case 'WebcastGiftMessage':
-        const giftMessage = GiftMessage.decode(msg.payload);
-        console.log(giftMessage);
-        // 处理礼物消息
-        // const giftPayload = zlib.gunzipSync(msg.payload);
-        // const giftMessage = GiftMessage.decode(giftPayload);
-        // 然后你可以使用giftMessage对象
-        break;
-
-      case 'WebcastMemberMessage':
-        // 处理成员加入 MemberMessage
-        // const memberPayload = zlib.gunzipSync(msg.payload);
-        const memberMessage = MemberMessage.decode(msg.payload);
-        // 然后你可以使用memberMessage对象
-        break;
-
-      case 'WebcastChatMessage':
-        // 处理弹幕
-        // const chatPayload = zlib.gunzipSync(msg.payload);
-        const chatMessage = ChatMessage.decode(msg.payload);
-        // 然后你可以使用chatMessage对象
-        break;
-    }
-  }
-
-  return message;
-}
 
 class WebSocketManager<T> {
+  protected EE = new EventEmitter()
   protected url = ''
   protected cookie = ''
   protected userAgent = ''
@@ -89,7 +59,7 @@ class WebSocketManager<T> {
 
     connection.on('open', this.onOpen);
 
-    connection.on('message', this.onMessage);
+    connection.on('message', this.onMessage.bind(this));
 
     connection.on('close', this.onClose);
   }
@@ -100,28 +70,56 @@ class WebSocketManager<T> {
       msgId: logId  // 这里的 logid 需要从某个地方获取
     });
     const serializedMessage = PushFrame.encode(pushproto_PushFrame2).finish();
-    ws.send(serializedMessage);
-
+    ws?.readyState === 1 && ws.send(serializedMessage);
   }
   onOpen() {
     console.log(`已连接直播间:`);
   }
 
   onMessage(data) {
-    // 解析protobuf数据
-    // const payload = Buffer.from(data);
     const pushFrame = PushFrame.decode(data);
     const decompressed = pako.ungzip(pushFrame.payload);
     const message = Response.decode(decompressed);
 
-
     // 处理消息
     const logId = pushFrame.logId.toString();
-    handleMessage(message)
+    this.handleMessage(message)
     if (message.needAck) {
+      const ws = this.connections.get(this.liveId)
       this.sendAck(ws, logId, message.internalExt.toString());
     }
   }
+  handleMessage(message) {
+    // 遍历消息列表
+    for (let msg of message.messagesList) {
+      // 根据方法处理消息
+      switch (msg.method) {
+        case 'WebcastGiftMessage':
+          const giftMessage = GiftMessage.decode(msg.payload);
+          this.EE.emit('data', [giftMessage])
+          break;
+
+       /* case 'WebcastMemberMessage':
+          // 处理成员加入 MemberMessage
+          // const memberPayload = zlib.gunzipSync(msg.payload);
+          const memberMessage = MemberMessage.decode(msg.payload);
+
+          const message = getMessage(memberMessage, 'WebcastMemberMessage')
+          this.EE.emit('data', [message])
+          // 然后你可以使用memberMessage对象
+          break;*/
+
+        /*case 'WebcastChatMessage':
+          // 处理弹幕
+          // const chatPayload = zlib.gunzipSync(msg.payload);
+          console.log(ChatMessage.decode(msg.payload))
+          // const chatMessage = ChatMessage.decode(msg.payload);
+          // 然后你可以使用chatMessage对象
+          break;*/
+      }
+    }
+  }
+
 
   onClose() {
     console.log(`直播间  已断开连接`);
@@ -151,11 +149,23 @@ class WebSocketManager<T> {
     this.liveId = liveId
     this.createConnection()
   }
+  subscribe (event: string, callback: (data: T[]) => void) {
+    this.EE.addListener(event, callback)
+  }
 }
 
 const manager =  new WebSocketManager()
 export const injectSocket = () => {
   ipcMain.handle('createSocket', (event, data) => {
-    return  manager.connect(data)
+    manager.connect(data)
+  });
+  ipcMain.handle('subscribe', (event, eventName) => {
+    manager.subscribe(eventName, (data) => {
+      event.sender.send(`${eventName}-response`, data);
+    })
+  });
+
+  ipcMain.handle('closeSocket', (event, liveId) => {
+    return manager.closeConnection(liveId)
   });
 }
