@@ -32,6 +32,7 @@ import React from 'react'
 import {validURL} from "@/lib/validate";
 import * as XLSX from 'xlsx'
 import {ResizeAbel} from './components/resizable'
+import {ResizeAbel as ResizeAbelUser} from './components/resizable_user'
 import {useServiceClient} from "@/stores";
 import {StreamReader} from "@/lib/streamer";
 import Long from 'long';
@@ -316,7 +317,6 @@ const LiveRoomTable: React.FC = (props: LiveRoomTableProps) => {
         }
     }
 
-    console.log(props.shareQrCodeData, 123123123)
     return (
         <Row>
             <Col span={16}>
@@ -330,7 +330,7 @@ const LiveRoomTable: React.FC = (props: LiveRoomTableProps) => {
             </Col>
             <Col span={8}>
                 <Space direction='vertical' style={{margin: '0 24px'}}>
-                    <Typography.Text bold>二维码{props.shareQrCodeData.nickname}</Typography.Text>
+                    <Typography.Text bold>二维码-{props.shareQrCodeData.nickname}</Typography.Text>
 
                     <Image
                         width={250}
@@ -537,19 +537,20 @@ const UserTable: React.FC = (props: UserTableProps) => {
 
     const onClick = (item) => {
         client.getUserprofile(item.user.secUid).then(res => {
-            console.log(res, 2222, item.user.nickName)
-            const {data: {share_info: {share_qrcode_url: {url_list}}}} = res
-            props.setShareQrCodeData(() => ({
-                url: url_list[0] || '',
-                nickname: item.user.nickName || ''
-            }))
-            console.log(res, 33333, item.user.nickName)
+            const {data: {share_info: {share_qrcode_url: {url_list=[]}}}} = res
+            props.setShareQrCodeData(() => {
+                console.log('wozhixingle')
+                return{
+                    url: url_list[0] || '',
+                    nickname: item.user.nickName || ''
+                }
+            })
         }).catch(err => {
 
         })
     }
     return <div>
-        <ResizeAbel
+        <ResizeAbelUser
             columns={userColumns}
             data={props.userData}
             rowMap={{
@@ -601,7 +602,7 @@ const LiveDanmuPage = () => {
     const [userData, setUserData] = useState([])
     const [shareQrCodeData, setShareQrCodeData] = useState({url: '', nickname: ''})
 
-    console.log(shareQrCodeData, 366666)
+
     useEffect(() => {
         if (tableValues.length > 0) {
             setDrawerShow(true)
