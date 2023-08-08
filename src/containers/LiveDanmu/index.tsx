@@ -271,9 +271,9 @@ const SearchHeader: React.FC = (props: SearchHeaderProps) => {
 interface LiveRoomTableProps {
     liveRoomList: typeof columns[]
     setLiveRoomList: (val: any) => void
-    startConnect: (val: any) => void
-    stopConnect: (val: any) => void
-    removeLive: (val: any) => void
+    startConnect: (val: any, index) => void
+    stopConnect: (val: any, index) => void
+    removeLive: (val: any, index) => void
     exportLive: () => void
     clearAllLive: () => void
     shareQrCodeData: { url: string, nickname: string }
@@ -622,7 +622,7 @@ const LiveDanmuPage = () => {
 
     async function clearAllLive() {
         // 断开所有直播状态
-        await stopAll()
+        await stopAll({ isShowMessage: false})
         // 清空直播列表
         setLiveRoomList([])
         // 清空用户评论列表
@@ -649,9 +649,9 @@ const LiveDanmuPage = () => {
             await startConnect(record);
         }
     }
-    async function stopAll() {
+    async function stopAll({isShowMessage = true}) {
         const list = liveRoomList.filter(obj => obj.connectStatus === ConnectEnum['正在抓取'])
-        if(!list.length) {
+        if(!list.length && isShowMessage) {
             Notification.warning({
                 content: '没有可以终止的直播间',
             })
