@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { update } from './update'
 import { createMenu } from './menu'
 import {injectDiskStore} from "./disk-store";
-import { injectSocket } from './socket'
+import { injectSocket } from './sockets'
 
 // The built directory structure
 //

@@ -15,13 +15,6 @@ import {
     Drawer,
     Select,
 } from '@arco-design/web-react';
-import dayjs from 'dayjs'
-import utc from 'dayjs/plugin/utc';
-import 'dayjs/locale/zh-cn'
-
-dayjs.locale('zh-cn') // use local
-
-dayjs.extend(utc);
 const CheckboxGroup = Checkbox.Group;
 const useCheckbox = Checkbox.useCheckbox;
 
@@ -34,7 +27,6 @@ import * as XLSX from 'xlsx'
 import {ResizeAbel} from './components/resizable'
 import {ResizeAbel as ResizeAbelUser} from './components/resizable_user'
 import {useServiceClient} from "@/stores";
-import {StreamReader} from "@/lib/streamer";
 import Long from 'long';
 import {ipcRenderer} from "electron";
 
@@ -350,15 +342,12 @@ const UserTableOptions: React.FC = (props: UserTableOptionsProps) => {
     const {
         selected,
         setSelected,
-        isPartialSelected,
-        toggle,
     } = useCheckbox(
         options.map((x) => x.value),
         options.map((x) => x.defaultChecked && x.value)
     );
 
     const onChange = (v) => {
-        console.log(v)
         setSelected(v)
     }
 
@@ -415,92 +404,80 @@ const userColumns = [
         dataIndex: 'salary',
         width: 100,
         render: (col, item) => {
-            const {common: {method, describe}} = item
             return <Typography.Paragraph ellipsis={{rows: 1, showTooltip: true, wrapper: 'span'}}>
-                {MessageMethodEnums[method]}{describe}
+                {item.methodText}
             </Typography.Paragraph>
         }
     },
     {
         title: '礼物数量',
-        dataIndex: 'address',
-        render: (col, item) => {
-            return <Typography.Paragraph ellipsis={{rows: 1, showTooltip: true, wrapper: 'span'}}>
-                {item?.gift?.diamondCount}
-            </Typography.Paragraph>
-        }
+        dataIndex: 'giftNum',
     },
     {
         title: '动作时间',
         width: 140,
-        dataIndex: '动作时间',
+        dataIndex: 'actionTime',
         render: (col, item) => {
-            const data = item.common.createTime
-            const transValue = Long.fromBits(data.low, data.high, data.unsigned)
-            const value = transValue.toString().length === 10 ? transValue.toString() + '000' : transValue.toString()
             return <Typography.Paragraph ellipsis={{rows: 1, showTooltip: true, wrapper: 'span'}}>
-                {dayjs.utc(+value).format('YYYY/MM/DD HH:mm:ss')}
+                {item.actionTime}
             </Typography.Paragraph>
         }
     },
     {
         title: 'Uid',
-        dataIndex: 'email1',
+        dataIndex: 'shortId',
         render: (col, item) => {
-            const data = item.user.id
-
-            const value = Long.fromBits(data.low, data.high, data.unsigned)
             return <Typography.Paragraph ellipsis={{rows: 1, showTooltip: true, wrapper: 'span'}}>
-                {value.toString()}
+                {item.shortId}
             </Typography.Paragraph>
         }
     },
     {
-        title: 'Secuid',
+        title: 'secUid',
         dataIndex: 'email2',
         render: (col, item) => {
             return <Typography.Paragraph ellipsis={{rows: 1, showTooltip: true, wrapper: 'span'}}>
-                {item.user.secUid}
+                {item?.secUid}
             </Typography.Paragraph>
         }
     },
     {
         title: '用户昵称',
-        dataIndex: 'email3',
+        dataIndex: 'nickName',
         render: (col, item) => {
             return <Typography.Paragraph ellipsis={{rows: 1, showTooltip: true, wrapper: 'span'}}>
-                {item.user.nickName}
+                {item.nickName}
             </Typography.Paragraph>
         }
     },
     {
         title: '抖音号',
-        dataIndex: 'email4',
+        dataIndex: 'displayId',
         render: (col, item) => {
             return <Typography.Paragraph ellipsis={{rows: 1, showTooltip: true, wrapper: 'span'}}>
-                {item.user.displayId}
+                {item?.displayId}
             </Typography.Paragraph>
         }
     },
     {
         title: '性别',
-        dataIndex: 'email5',
+        dataIndex: 'gender',
     },
     {
         title: '年龄',
-        dataIndex: 'email6',
+        dataIndex: 'user_age',
     },
     {
         title: '城市',
-        dataIndex: 'email7',
+        dataIndex: 'city',
     },
     {
         title: '简介',
-        dataIndex: 'email8',
+        dataIndex: 'signature',
     },
     {
         title: '私密账号',
-        dataIndex: 'email9',
+        dataIndex: 'secret',
     },
     {
         title: '手机号',
@@ -521,7 +498,6 @@ const UserTable: React.FC = (props: UserTableProps) => {
     const client = useServiceClient()
 
     const onUserClick = (item) => {
-        console.log(item)
         client.getUserprofile(item.user.secUid).then(res => {
             const share_qrcode_url = res?.data?.share_info?.share_qrcode_url ?? {}
             const {url_list = []} = share_qrcode_url
@@ -670,6 +646,7 @@ const LiveDanmuPage = () => {
         }
 
         const handleMessage = (event, data) => {
+            console.log(data)
             setUserData((prevUserData) => {
                 return [...prevUserData, ...data];
             })

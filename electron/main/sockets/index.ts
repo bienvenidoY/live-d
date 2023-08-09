@@ -1,39 +1,9 @@
 import WebSocket from 'ws';
-import { app, ipcMain} from "electron";
-import protobuf from 'protobufjs'
+import { ipcMain} from "electron";
 import pako from 'pako'
-import path from 'path'
 import EventEmitter from 'eventemitter3'
 import {getMessage} from "./socket-message";
-
-function loadProtoFile(filePath) {
-  return new Promise((resolve, reject) => {
-    try {
-      const root = protobuf.loadSync(filePath);
-      resolve(root);
-    } catch (error) {
-      reject(error);
-    }
-  });
-}
-
-let PushFrame = '';
-let Response = '';
-let GiftMessage = '';
-let MemberMessage = '';
-let ChatMessage = '';
-
-//当前应用的目录
-const templateFilePath = app.isPackaged ? path.join(process.cwd(), '/resources/extraResources') : path.join(process.cwd(), '/extraResources')
-const extraFilePath = templateFilePath + '/douyin.proto'
-loadProtoFile(extraFilePath).then(root => {
-  PushFrame = root.lookupType("PushFrame");
-  Response = root.lookupType("Response");  // replace with your actual type
-  GiftMessage = root.lookupType("GiftMessage");
-  MemberMessage = root.lookupType("MemberMessage");
-  ChatMessage = root.lookupType("ChatMessage");
-})
-
+import {resolver} from "./message-resolver";
 
 class WebSocketManager<T> {
   protected EE = new EventEmitter()
@@ -63,7 +33,8 @@ class WebSocketManager<T> {
 
     connection.on('close', this.onClose);
   }
-  sendAck(ws, logId, internalExt) {
+  async sendAck(ws, logId, internalExt) {
+    const { PushFrame } = await resolver()
     const pushproto_PushFrame2 = PushFrame.create({
       payloadtype: 'ack',
       payload: internalExt,
@@ -76,27 +47,28 @@ class WebSocketManager<T> {
     console.log(`已连接直播间:`);
   }
 
-  onMessage(data) {
+  async onMessage(data) {
+    const { PushFrame, Response } = await resolver()
     const pushFrame = PushFrame.decode(data);
     const decompressed = pako.ungzip(pushFrame.payload);
     const message = Response.decode(decompressed);
 
     // 处理消息
     const logId = pushFrame.logId.toString();
-    this.handleMessage(message)
+    await this.handleMessage(message)
     if (message.needAck) {
       const ws = this.connections.get(this.liveId)
-      this.sendAck(ws, logId, message.internalExt.toString());
+      await this.sendAck(ws, logId, message.internalExt.toString());
     }
   }
-  handleMessage(message) {
+  async handleMessage(message) {
     // 遍历消息列表
-    for (let msg of message.messagesList) {
+    for (let msg of message.messages) {
       // 根据方法处理消息
       switch (msg.method) {
         case 'WebcastGiftMessage':
-          const giftMessage = GiftMessage.decode(msg.payload);
-          this.EE.emit('data', [giftMessage])
+          const decodedMessage = await getMessage(msg.payload, msg.method)
+          this.EE.emit('data', [decodedMessage])
           break;
 
        /* case 'WebcastMemberMessage':
