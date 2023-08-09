@@ -92,7 +92,7 @@ export const ResizeAbel: React.FC = (props: ResizeAbelProps) => {
                         })
                     },
                     onClick:()=>{
-                        props.rowMap.onClick(record)
+                        props?.rowMap?.onClick(record)
                     }
                 };
             }}

@@ -4,6 +4,7 @@ import pako from 'pako'
 import EventEmitter from 'eventemitter3'
 import {getMessage} from "./socket-message";
 import {resolver} from "./message-resolver";
+import Long from 'long';
 
 class WebSocketManager<T> {
   protected EE = new EventEmitter()
@@ -54,10 +55,18 @@ class WebSocketManager<T> {
     const message = Response.decode(decompressed);
 
     // 处理消息
-    const logId = pushFrame.logId.toString();
-    await getMessage(message.messages, (decodedMessage) => {
-      this.EE.emit('data', [decodedMessage])
-    })
+    const logId = pushFrame.logId.toString()
+    try {
+      await getMessage(message.messages, (decodedMessage) => {
+        this.EE.emit('data', [decodedMessage])
+      })
+    }catch (e) {
+      console.log('getMessage错误------')
+      console.log(e)
+      console.log('getMessage错误结束----')
+    }
+
+    // this.EE.emit('data', [message.messages])
     if (message.needAck) {
       const ws = this.connections.get(this.liveId)
       await this.sendAck(ws, logId, message.internalExt.toString());

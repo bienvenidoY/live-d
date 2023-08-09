@@ -645,8 +645,7 @@ const LiveDanmuPage = () => {
             list[recordIndex].connectStatus = ConnectEnum['正在抓取']
         }
 
-        const handleMessage = (event, data) => {
-            console.log(data)
+        const handleMessage = async (event, data) => {
             setUserData((prevUserData) => {
                 return [...prevUserData, ...data];
             })

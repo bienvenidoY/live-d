@@ -99,7 +99,7 @@ const unifyData: UnifyDataTypes = {
 
 export async function getMessage(message, callback: Function) {
   let result: Partial<UnifyDataTypes> = {};
-  const { PushFrame, Response, GiftMessage, ChatMessage, MemberMessage, SocialMessage } = await resolver();
+  const { PushFrame, Response, GiftMessage, ChatMessage, MemberMessage, SocialMessage, LikeMessage } = await resolver();
   // 遍历消息列表
   for (let msg of message) {
     // 根据方法处理消息
@@ -111,28 +111,28 @@ export async function getMessage(message, callback: Function) {
         break;
 
       case 'WebcastMemberMessage':
-        // 处理成员加入
+        // TODO 处理成员加入
         // result = webcastMemberMessage(MemberMessage.decode(message));
         // callback(result)
         break;
 
       case 'WebcastChatMessage':
-        // 处理弹幕
+        // TODO 处理弹幕
         // result = webcastChatMessage(ChatMessage.decode(message));
         // callback(result)
         break;
       case 'WebcastSocialMessage':
-        // 处理关注
-        result = webcastSocialMessage(SocialMessage.decode(message));
-        callback(result)
-        break;
-      case 'WebcastLikeMessage':
-        // 处理点赞
-        // result = webcastLikeMessage(ChatMessage.decode(message));
+        // TODO 处理关注
+        // result = webcastSocialMessage(SocialMessage.decode(message));
         // callback(result)
         break;
+      case 'WebcastLikeMessage':
+        // TODO 处理点赞
+        result = webcastLikeMessage(LikeMessage.decode(message));
+        callback(result)
+        break;
       case 'WebcastRoomUserSeqMessage':
-        // 处理直播间人数变化
+        // TODO 处理直播间人数变化
         // result = webcastLikeMessage(ChatMessage.decode(message));
         // callback(result)
         break;
