@@ -133,7 +133,7 @@ export async function getMessage(message, callback: Function) {
         break;
       case 'WebcastRoomUserSeqMessage':
         // 处理直播间人数变化
-        result = webcastLikeMessage(RoomUserSeqMessage.decode(msg.payload));
+        result = webcastRoomUserSeqMessage(RoomUserSeqMessage.decode(msg.payload));
         callback(result)
         break;
     }
@@ -253,6 +253,21 @@ function webcastSocialMessage(message):UnifyDataTypes {
   }
 }
 function webcastLikeMessage(message) {
+  const body: any = {}
+  body.method = message.common.method;
+  body.roomId = message.common.roomId.toString();
+
+  const user = getUserData(message)
+  return {
+    ...unifyData,
+    ...user,
+    ...body,
+    message,
+  }
+}
+
+
+function webcastRoomUserSeqMessage(message) {
   const body: any = {}
   body.method = message.common.method;
   body.roomId = message.common.roomId.toString();

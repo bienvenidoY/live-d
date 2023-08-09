@@ -17,6 +17,7 @@ import {
 } from '@arco-design/web-react';
 const CheckboxGroup = Checkbox.Group;
 const useCheckbox = Checkbox.useCheckbox;
+const Option = Select.Option;
 
 
 const Row = Grid.Row;
@@ -345,8 +346,12 @@ const options = [
     {label: '解析完整信息(需要代理,采集速度会变慢)', value: 9, defaultChecked: false},
 ]
 
+interface LivePendingOptionsType {
+    roomId: string
+    roomTitle: string
+}
 interface UserTableOptionsProps {
-    livePendingOptions: []
+    livePendingOptions: LivePendingOptionsType[]
     onCheckBoxSelected: (selected: string[]) => void
 }
 
@@ -364,9 +369,9 @@ const UserTableOptions: React.FC = (props: UserTableOptionsProps) => {
         setSelected(v)
     }
 
-
     return (
         <div>
+
             <Space>
                 <Select
                     addBefore='直播间'
@@ -374,11 +379,11 @@ const UserTableOptions: React.FC = (props: UserTableOptionsProps) => {
                     showSearch
                     style={{width: 300}}
                     onChange={(value) =>
-                        console.log(123)
+                        console.log(123, value)
                     }
                 >
                     {props.livePendingOptions.map((option, index) => (
-                        <Option key={option} value={option}>
+                        <Option key={option.roomId} value={option.roomId}>
                             {option.roomTitle}
                         </Option>
                     ))}
@@ -618,7 +623,9 @@ const LiveDanmuPage = () => {
     }
 
     async function startAll() {
-        const list = liveRoomList.filter(obj => obj.connectStatus === ConnectEnum['未抓取'])
+        const list = liveRoomList.filter(obj => obj.connectStatus === ConnectEnum['未抓取']
+          && obj.roomStatus === LiveStatsType['正在直播']
+        )
         if(!liveRoomList.length) {
             Notification.warning({
                 content: '还未导入直播间',
@@ -650,9 +657,8 @@ const LiveDanmuPage = () => {
     async function startConnect(record, index?: number) {
         const list = [...liveRoomList]
         const recordIndex = index ?? list.findIndex(v => v.roomUrl === record.roomUrl)
-        if(recordIndex> -1) {
-            list[recordIndex].connectStatus = ConnectEnum['正在抓取']
-        }
+        if (recordIndex < 0) return
+        list[recordIndex].connectStatus = ConnectEnum['正在抓取']
 
         await ipcRenderer.invoke('createSocket', {...record.wsData, liveId: record.id})
         await ipcRenderer.invoke('subscribe', 'data')
@@ -672,18 +678,17 @@ const LiveDanmuPage = () => {
     const handleRoom = async (event, data) => {
         const list = [...liveRoomList]
         const recordIndex = list.findIndex(v => v.roomId === data.roomId)
-        if(recordIndex> -1) {
-            list[recordIndex].userCountStr = data.total
-            list[recordIndex].totalUserStr = data.totalUser
-        }
+        if (recordIndex < 0) return
+        list[recordIndex].userCountStr = data.total
+        list[recordIndex].totalUserStr = data.totalUser
+
         setLiveRoomList(list)
     }
     async function stopConnect(record, index?) {
         const list = [...liveRoomList]
-        const recordIndex = index ?? list.findIndex(v => v.roomUrl === record.roomUrl)
-        if(recordIndex> -1) {
-            list[recordIndex].connectStatus = ConnectEnum['未抓取']
-        }
+        const recordIndex = index ?? list.findIndex(v => v.connectStatus === LiveStatsType['正在抓取'])
+        if (recordIndex < 0) return
+        list[recordIndex].connectStatus = ConnectEnum['未抓取']
 
         await ipcRenderer.invoke('closeSocket', record.id)
         setLiveRoomList(list)
@@ -729,7 +734,7 @@ const LiveDanmuPage = () => {
                     <Card>
                         <Space size={8} direction="vertical" style={{width: '100%'}}>
                             <UserTableOptions
-                              livePendingOptions={liveRoomList.map(v => v.connectStatus === ConnectEnum['正在抓取'])}
+                              livePendingOptions={liveRoomList.filter(v => v.connectStatus === ConnectEnum['正在抓取'])}
                               onCheckBoxSelected={setCheckBoxSelected}
 
                             />
