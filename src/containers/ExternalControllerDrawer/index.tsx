@@ -24,6 +24,7 @@ export default function ExternalController () {
     useSWR('getLicenseCode', async () => {
         const licenseCode = await ipcRenderer.invoke('license-disk-store-get')
         if(!licenseCode) {
+            setLoading(false)
             setIdentityIsShow(true)
             return
         }
