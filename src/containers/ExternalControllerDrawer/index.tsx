@@ -81,6 +81,7 @@ export default function ExternalController () {
               className="!w-105 !<sm:w-84"
               show={identityIsShow}
               title='授权码'
+              maskClosable={false}
               bodyClassName="external-controller"
               isShowCancelBtn={false}
               onOk={handleOk}
