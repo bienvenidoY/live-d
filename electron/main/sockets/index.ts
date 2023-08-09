@@ -55,40 +55,12 @@ class WebSocketManager<T> {
 
     // 处理消息
     const logId = pushFrame.logId.toString();
-    await this.handleMessage(message)
+    await getMessage(message.messages, (decodedMessage) => {
+      this.EE.emit('data', [decodedMessage])
+    })
     if (message.needAck) {
       const ws = this.connections.get(this.liveId)
       await this.sendAck(ws, logId, message.internalExt.toString());
-    }
-  }
-  async handleMessage(message) {
-    // 遍历消息列表
-    for (let msg of message.messages) {
-      // 根据方法处理消息
-      switch (msg.method) {
-        case 'WebcastGiftMessage':
-          const decodedMessage = await getMessage(msg.payload, msg.method)
-          this.EE.emit('data', [decodedMessage])
-          break;
-
-       /* case 'WebcastMemberMessage':
-          // 处理成员加入 MemberMessage
-          // const memberPayload = zlib.gunzipSync(msg.payload);
-          const memberMessage = MemberMessage.decode(msg.payload);
-
-          const message = getMessage(memberMessage, 'WebcastMemberMessage')
-          this.EE.emit('data', [message])
-          // 然后你可以使用memberMessage对象
-          break;*/
-
-        /*case 'WebcastChatMessage':
-          // 处理弹幕
-          // const chatPayload = zlib.gunzipSync(msg.payload);
-          console.log(ChatMessage.decode(msg.payload))
-          // const chatMessage = ChatMessage.decode(msg.payload);
-          // 然后你可以使用chatMessage对象
-          break;*/
-      }
     }
   }
 
