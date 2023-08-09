@@ -634,7 +634,7 @@ const LiveDanmuPage = () => {
         }
         if(!list.length) {
             Notification.warning({
-                content: '列表中直播间已全部开始',
+                content: '开播状态房间已全部开始',
             })
             return
         }
@@ -656,7 +656,7 @@ const LiveDanmuPage = () => {
     }
     async function startConnect(record, index?: number) {
         const list = [...liveRoomList]
-        const recordIndex = index ?? list.findIndex(v => v.roomUrl === record.roomUrl)
+        const recordIndex = index ?? list.findIndex(v => v.roomId === record.roomId)
         if (recordIndex < 0) return
         list[recordIndex].connectStatus = ConnectEnum['正在抓取']
 
@@ -686,7 +686,7 @@ const LiveDanmuPage = () => {
     }
     async function stopConnect(record, index?) {
         const list = [...liveRoomList]
-        const recordIndex = index ?? list.findIndex(v => v.connectStatus === LiveStatsType['正在抓取'])
+        const recordIndex = index ?? list.findIndex(v => v.roomId === record.roomId)
         if (recordIndex < 0) return
         list[recordIndex].connectStatus = ConnectEnum['未抓取']
 
