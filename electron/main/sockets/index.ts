@@ -4,7 +4,6 @@ import pako from 'pako'
 import EventEmitter from 'eventemitter3'
 import {getMessage} from "./socket-message";
 import {resolver} from "./message-resolver";
-import Long from 'long';
 
 class WebSocketManager<T> {
   protected EE = new EventEmitter()
@@ -58,7 +57,11 @@ class WebSocketManager<T> {
     const logId = pushFrame.logId.toString()
     try {
       await getMessage(message.messages, (decodedMessage) => {
-        this.EE.emit('data', [decodedMessage])
+        if(decodedMessage.method === "WebcastRoomUserSeqMessage") {
+          this.EE.emit('room', decodedMessage)
+        }else {
+          this.EE.emit('data', decodedMessage)
+        }
       })
     }catch (e) {
       console.log('getMessage错误------')

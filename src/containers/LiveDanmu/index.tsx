@@ -27,8 +27,17 @@ import * as XLSX from 'xlsx'
 import {ResizeAbel} from './components/resizable'
 import {ResizeAbel as ResizeAbelUser} from './components/resizable_user'
 import {useServiceClient} from "@/stores";
-import Long from 'long';
 import {ipcRenderer} from "electron";
+
+
+enum MessageMethodEnums {
+    "WebcastGiftMessage" = '礼物',
+    "WebcastMemberMessage" = '进入',
+    "WebcastChatMessage" = '弹幕',
+    "WebcastSocialMessage" = '关注',
+    "WebcastLikeMessage" = '点赞',
+}
+
 
 export enum LiveStatsType {
     '正在直播' = 2,
@@ -162,6 +171,7 @@ const SearchHeader: React.FC = (props: SearchHeaderProps) => {
                     const reslut = []
                     workbook.SheetNames.forEach(item => {
                         const tv = XLSX.utils.sheet_to_json(workbook.Sheets[item])
+                        console.log('tv',tv)
                         if (tv.length < 200) {
                             reslut.push({
                                 name: item,
@@ -204,8 +214,10 @@ const SearchHeader: React.FC = (props: SearchHeaderProps) => {
         const errList = [] // 不符合要求的数据
         const successList = [] //符合要求的数据
         handleUploadFile().then(res => {
+            console.log(res)
             res.forEach(d => {
                 d.tableValue.forEach((s, index) => {
+                    console.log(s[Object.keys(s)[0]], isValidUrl(s[Object.keys(s)[0]]))
                     if (isValidUrl(s[Object.keys(s)[0]])) {
                         successList.push(s)
                     } else {
@@ -215,9 +227,9 @@ const SearchHeader: React.FC = (props: SearchHeaderProps) => {
                     }
                 })
             })
+            console.log(successList, errList)
             props.setTableValues([successList, errList])
             props.onAddLive(successList.map(item => item[Object.keys(item)[0]]))
-            console.log(errList, successList, 123123123)
         })
     }
 
@@ -321,13 +333,12 @@ const LiveRoomTable: React.FC = (props: LiveRoomTableProps) => {
     )
 }
 
-
 const options = [
-    {label: '进入', value: 1, defaultChecked: false},
-    {label: '礼物', value: 2, defaultChecked: true},
-    {label: '弹幕', value: 3, defaultChecked: true},
-    {label: '点赞', value: 4, defaultChecked: true},
-    {label: '关注', value: 5, defaultChecked: true},
+    {label: '进入', value: 'WebcastMemberMessage', defaultChecked: false},
+    {label: '礼物', value:  'WebcastGiftMessage', defaultChecked: true},
+    {label: '弹幕', value:  'WebcastChatMessage', defaultChecked: true},
+    {label: '点赞', value:  'WebcastLikeMessage', defaultChecked: true},
+    {label: '关注', value:  'WebcastSocialMessage', defaultChecked: true},
     {label: '信息跟随', value: 6, defaultChecked: true},
     {label: '自动去重', value: 7, defaultChecked: true},
     {label: '自动抓取', value: 8, defaultChecked: true},
@@ -336,6 +347,7 @@ const options = [
 
 interface UserTableOptionsProps {
     livePendingOptions: []
+    onCheckBoxSelected: (selected: string[]) => void
 }
 
 const UserTableOptions: React.FC = (props: UserTableOptionsProps) => {
@@ -348,6 +360,7 @@ const UserTableOptions: React.FC = (props: UserTableOptionsProps) => {
     );
 
     const onChange = (v) => {
+        props.onCheckBoxSelected(v)
         setSelected(v)
     }
 
@@ -375,10 +388,6 @@ const UserTableOptions: React.FC = (props: UserTableOptionsProps) => {
             </Space>
         </div>
     );
-}
-
-enum MessageMethodEnums {
-    "WebcastGiftMessage" = '礼物:',
 }
 
 
@@ -538,7 +547,7 @@ const ErrorDrawer: React.FC = (props: ErrorDrawerProps) => {
             }}
         >
             {
-                props.tableValues[1] ? props.tableValues[1].map((item, index) => {
+                !!props.tableValues[1]?.length ? props.tableValues[1].map((item, index) => {
                     return (
                         <div key={index}>
                             {`第${index + 1}行数据有误`}
@@ -555,14 +564,15 @@ const LiveDanmuPage = () => {
     const [liveRoomList, setLiveRoomList] = useState([])
     const [drawerShow, setDrawerShow] = useState(false)
     const [tableValues, setTableValues] = useState([])
-    const [livePendingOptions, setLivePendingOptions] = useState([])
+    const [checkBoxSelected, setCheckBoxSelected] = useState(options.filter(v=> v.defaultChecked).map(v => v.value))
     const client = useServiceClient()
     const [userData, setUserData] = useState([])
     const [shareQrCodeData, setShareQrCodeData] = useState({url: '', nickname: ''})
 
 
     useEffect(() => {
-        if (tableValues.length > 0) {
+        const [_, errList = []] = tableValues
+        if (errList.length > 0) {
             setDrawerShow(true)
         }
     }, [tableValues])
@@ -640,20 +650,32 @@ const LiveDanmuPage = () => {
     async function startConnect(record, index?: number) {
         const list = [...liveRoomList]
         const recordIndex = index ?? list.findIndex(v => v.roomUrl === record.roomUrl)
-        console.log(recordIndex)
         if(recordIndex> -1) {
             list[recordIndex].connectStatus = ConnectEnum['正在抓取']
         }
 
-        const handleMessage = async (event, data) => {
-            setUserData((prevUserData) => {
-                return [...prevUserData, ...data];
-            })
-        }
-
         await ipcRenderer.invoke('createSocket', {...record.wsData, liveId: record.id})
         await ipcRenderer.invoke('subscribe', 'data')
+        await ipcRenderer.invoke('subscribe', 'room')
         ipcRenderer.on('data-response', handleMessage);
+        ipcRenderer.on('room-response', handleRoom);
+        setLiveRoomList(list)
+    }
+
+    const handleMessage = async (event, data) => {
+        console.log('消息处理-'+data.method , data)
+        setUserData((prevUserData) => {
+            return [...prevUserData, ...[data]];
+        })
+    }
+
+    const handleRoom = async (event, data) => {
+        const list = [...liveRoomList]
+        const recordIndex = list.findIndex(v => v.roomId === data.roomId)
+        if(recordIndex> -1) {
+            list[recordIndex].userCountStr = data.total
+            list[recordIndex].totalUserStr = data.totalUser
+        }
         setLiveRoomList(list)
     }
     async function stopConnect(record, index?) {
@@ -706,7 +728,11 @@ const LiveDanmuPage = () => {
                 <Col span={24}>
                     <Card>
                         <Space size={8} direction="vertical" style={{width: '100%'}}>
-                            <UserTableOptions livePendingOptions={livePendingOptions}/>
+                            <UserTableOptions
+                              livePendingOptions={liveRoomList.map(v => v.connectStatus === ConnectEnum['正在抓取'])}
+                              onCheckBoxSelected={setCheckBoxSelected}
+
+                            />
                             <UserTable userData={userData} setShareQrCodeData={setShareQrCodeData}/>
                         </Space>
                     </Card>

@@ -99,42 +99,42 @@ const unifyData: UnifyDataTypes = {
 
 export async function getMessage(message, callback: Function) {
   let result: Partial<UnifyDataTypes> = {};
-  const { PushFrame, Response, GiftMessage, ChatMessage, MemberMessage, SocialMessage, LikeMessage } = await resolver();
+  const {GiftMessage, ChatMessage, MemberMessage, SocialMessage, LikeMessage, RoomUserSeqMessage } = await resolver();
   // 遍历消息列表
   for (let msg of message) {
     // 根据方法处理消息
     switch (msg.method) {
       case 'WebcastGiftMessage':
         // 礼物消息
-        // result = webcastGiftMessage(GiftMessage.decode(msg.payload));
-        // callback(result)
+        result = webcastGiftMessage(GiftMessage.decode(msg.payload));
+        callback(result)
         break;
 
       case 'WebcastMemberMessage':
-        // TODO 处理成员加入
-        // result = webcastMemberMessage(MemberMessage.decode(message));
-        // callback(result)
+        // 处理成员加入
+        result = webcastMemberMessage(MemberMessage.decode(msg.payload));
+        callback(result)
         break;
 
       case 'WebcastChatMessage':
-        // TODO 处理弹幕
-        // result = webcastChatMessage(ChatMessage.decode(message));
-        // callback(result)
+        // 处理弹幕
+        result = webcastChatMessage(ChatMessage.decode(msg.payload));
+        callback(result)
         break;
       case 'WebcastSocialMessage':
-        // TODO 处理关注
-        // result = webcastSocialMessage(SocialMessage.decode(message));
-        // callback(result)
+        //  处理关注
+        result = webcastSocialMessage(SocialMessage.decode(msg.payload));
+        callback(result)
         break;
       case 'WebcastLikeMessage':
-        // TODO 处理点赞
-        result = webcastLikeMessage(LikeMessage.decode(message));
+        //  处理点赞
+        result = webcastLikeMessage(LikeMessage.decode(msg.payload));
         callback(result)
         break;
       case 'WebcastRoomUserSeqMessage':
-        // TODO 处理直播间人数变化
-        // result = webcastLikeMessage(ChatMessage.decode(message));
-        // callback(result)
+        // 处理直播间人数变化
+        result = webcastLikeMessage(RoomUserSeqMessage.decode(msg.payload));
+        callback(result)
         break;
     }
   }
@@ -142,11 +142,11 @@ export async function getMessage(message, callback: Function) {
 }
 
 enum MessageMethodEnums {
-  "WebcastGiftMessage" = '礼物:',
-  "WebcastMemberMessage" = '进入:',
-  "WebcastChatMessage" = '弹幕:',
-  "WebcastSocialMessage" = '关注:',
-  "WebcastLikeMessage" = '点赞:',
+  "WebcastGiftMessage" = '礼物',
+  "WebcastMemberMessage" = '进入',
+  "WebcastChatMessage" = '弹幕',
+  "WebcastSocialMessage" = '关注',
+  "WebcastLikeMessage" = '点赞',
 }
 
 enum GenderEnums {
@@ -160,114 +160,106 @@ function getTime(createTime) {
   return dayjs.utc(+value).format('YYYY/MM/DD HH:mm:ss')
 }
 
-function webcastGiftMessage(giftMessage):UnifyDataTypes {
-  const body: Partial<UnifyDataTypes> = {}
-  const {user = {} } = giftMessage
-  body.method = giftMessage.common.method;
-  body.methodText = MessageMethodEnums[giftMessage.common.method] + giftMessage.common.describe;
-  body.actionTime = getTime(giftMessage.common.createTime)
-  body.roomId = giftMessage.common.roomId.toString();
+
+function getUserData(message) {
+  const {user = {} } = message
+  const body = {}
   body.shortId = Long.fromBits(user?.shortId).toString();
   body.secUid = user?.secUid;
-  body.displayId = user.displayId;
-  body.nickName = user.nickname;
-  body.gender = GenderEnums[user.gender];
+  body.displayId = user?.displayId;
+  body.nickName = user?.nickname;
   body.followingCount = user.followInfo.followingCount.toString();
   body.followerCount = user.followInfo.followerCount.toString();
   body.followStatus = user.followInfo.followStatus.toString();
   body.payGrade = Long.fromBits(user.payGrade.level).toString();;
+  body.gender = GenderEnums[user.gender] ?? '未知';
+
+  return {
+    ...body,
+  }
+}
+function getLong(data) {
+  const { low, high, unsigned } = data
+  return Long.fromBits(low, high, unsigned).toString()
+}
+
+function webcastGiftMessage(message):UnifyDataTypes {
+  const body: Partial<UnifyDataTypes> = {}
+  body.method = message.common.method;
+  body.methodText = MessageMethodEnums[message.common.method] + ':' + message.common.describe;
+  body.actionTime = getTime(message.common.createTime)
+  body.roomId = message.common.roomId.toString();
+
   // 额外数据
-  body.giftId = giftMessage.giftId.toString();  // 礼物id
-  body.giftNum = giftMessage.gift.diamondCount;
-  body.groupCount = giftMessage.groupCount.toString();  // 礼物组数
-  body.repeatCount = giftMessage.repeatCount.toString();  // 礼物重复数
-  body.comboCount = giftMessage.comboCount.toString();  // 礼物连击数
-  body.giftName = giftMessage.gift.name;
+  body.giftId = message.giftId.toString();  // 礼物id
+  body.giftNum = message.gift.diamondCount;
+  body.groupCount = message.groupCount.toString();  // 礼物组数
+  body.repeatCount = message.repeatCount.toString();  // 礼物重复数
+  body.comboCount = message.comboCount.toString();  // 礼物连击数
+  body.giftName = message.gift.name;
+  const user = getUserData(message)
   return {
     ...unifyData,
-    ...body
+    ...user,
+    ...body,
+    message,
   }
 }
-function webcastMemberMessage(memberMessage):UnifyDataTypes {
+function webcastMemberMessage(message):UnifyDataTypes {
   const body: Partial<UnifyDataTypes> = {}
-  const {user = {} } = memberMessage
-  body.method = memberMessage.common.method;
-  body.roomId = memberMessage.common.roomId.toString();
-  body.shortId = Long.fromBits(user?.shortId).toString();
-  body.secUid = memberMessage.user.secUid;
-  body.displayId = memberMessage.user.displayId;
-  body.nickName = memberMessage.user.nickname;
-  body.gender = memberMessage.user.gender;
-  body.followingCount = user.followInfo.followingCount.toString();
-  body.followerCount = user.followInfo.followerCount.toString();
-  body.followStatus = user.followInfo.followStatus.toString();
-  body.payGrade = user.payGrade.level;
+
+  body.method = message.common.method;
+  body.roomId = message.common.roomId.toString();
+  body.methodText = MessageMethodEnums[message.common.method]
+
   // 成员数？
-  body.memberCount = memberMessage.memberCount;
-  // body.action = memberMessage.action.toString();
-  body.content = memberMessage.common.displayText.defaultFormat;
+  body.memberCount = message.memberCount;
+  // body.action = message.action.toString();
+  body.content = message.common.displayText.defaultFormat;
+  const user = getUserData(message)
   return {
     ...unifyData,
-    ...body
+    ...user,
+    ...body,
+    message,
   }
 }
-function webcastChatMessage(chatMessage):UnifyDataTypes {
+function webcastChatMessage(message):UnifyDataTypes {
   const body: Partial<UnifyDataTypes> = {}
-  body.method = chatMessage.common.method;
-  body.roomId = chatMessage.common.roomId.toString();
-  // body.giftNum = giftMessage.giftNum;
-  body.shortId = chatMessage.user.shortId.toString();
-  body.secUid = chatMessage.user.secUid;
-  body.displayId = chatMessage.user.displayId;
-  body.nickName = chatMessage.user.nickname;
-  body.gender = chatMessage.user.gender;
-  body.followingCount = chatMessage.user.followInfo.followingCount.toString();
-  body.followerCount = chatMessage.user.followInfo.followerCount.toString();
-  body.followStatus = chatMessage.user.followInfo.followStatus.toString();
-  body.payGrade = chatMessage.user.payGrade.level;
-  body.content = chatMessage.content;
+  body.method = message.common.method;
+  body.roomId = message.common.roomId.toString();
+  body.methodText = MessageMethodEnums[message.common.method] + ':' +  message.content;
+  body.payGrade = message.user.payGrade.level;
+  const user = getUserData(message)
   return {
     ...unifyData,
-    ...body
+    ...user,
+    ...body,
+    message,
   }
 }
 
-function webcastSocialMessage(socialMessage):UnifyDataTypes {
+function webcastSocialMessage(message):UnifyDataTypes {
   const body: Partial<UnifyDataTypes> = {}
-  const {user = {} } = socialMessage
-  body.method = socialMessage.common.method;
-  body.roomId = socialMessage.common.roomId.toString();
-  body.shortId = Long.fromBits(user?.shortId).toString();
-  body.secUid = user.secUid;
-  body.displayId = user.displayId;
-  body.nickName = user.nickname;
-  body.gender = user.gender;
-  body.followingCount = user.followInfo.followingCount.toString();
-  body.followerCount = user.followInfo.followerCount.toString();
-  body.followStatus = user.followInfo.followStatus.toString();
-  body.payGrade = user.payGrade.level;
+  body.method = message.common.method;
+  body.roomId = message.common.roomId.toString();
+  body.methodText = MessageMethodEnums[message.common.method]
+  const user = getUserData(message)
   return {
     ...unifyData,
-    ...body
+    ...user,
+    ...body,
+    message,
   }
 }
-function webcastLikeMessage(chatMessage):UnifyDataTypes {
-  const body: Partial<UnifyDataTypes> = {}
-  body.method = chatMessage.common.method;
-  body.roomId = chatMessage.common.roomId.toString();
-  // body.giftNum = giftMessage.giftNum;
-  body.shortId = chatMessage.user.shortId.toString();
-  body.secUid = chatMessage.user.secUid;
-  body.displayId = chatMessage.user.displayId;
-  body.nickName = chatMessage.user.nickname;
-  body.gender = chatMessage.user.gender;
-  body.followingCount = chatMessage.user.followInfo.followingCount.toString();
-  body.followerCount = chatMessage.user.followInfo.followerCount.toString();
-  body.followStatus = chatMessage.user.followInfo.followStatus.toString();
-  body.payGrade = chatMessage.user.payGrade.level;
-  body.content = chatMessage.content;
+function webcastLikeMessage(message) {
+  const body: any = {}
+  body.method = message.common.method;
+  body.roomId = message.common.roomId.toString();
+  body.total = message.total.toString();
+  body.totalUser = message.totalUser.toString();
   return {
-    ...unifyData,
-    ...body
+    ...body,
+    message,
   }
 }
