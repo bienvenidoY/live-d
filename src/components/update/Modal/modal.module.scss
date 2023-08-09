@@ -1,5 +1,5 @@
 .modal {
-  --primary-color: rgb(224, 30, 90);
+  --primary-color: rgb(22,93,255);
 
   :global {
     .modal-mask {
@@ -21,15 +21,19 @@
     }
 
     .modal-content {
-      box-shadow: 0 0 10px -4px rgb(130, 86, 208);
+      box-shadow: 0 0 10px -4px #ddd;
       overflow: hidden;
       border-radius: 4px;
 
       .modal-header {
         display: flex;
-        line-height: 38px;
-        background-color: var(--primary-color);
-
+        width: 100%;
+        box-sizing: border-box;
+        padding: 0 20px;
+        background: #fff;
+        border-bottom: 1px solid var(--color-neutral-3);
+        height: 48px;
+        align-items: center;
         .modal-header-text {
           font-weight: bold;
           width: 0;
@@ -38,6 +42,9 @@
       }
 
       .modal-close {
+        display: flex;
+        align-items: center;
+        justify-content: center;
         width: 30px;
         height: 30px;
         margin: 4px;

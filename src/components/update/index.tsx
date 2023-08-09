@@ -96,6 +96,7 @@ const Update = () => {
         okText={modalBtn?.okText}
         onCancel={modalBtn?.onCancel}
         onOk={modalBtn?.onOk}
+        title='检查更新'
         footer={updateAvailable ? /* hide footer */null : undefined}
       >
         <div className={styles.modalslot}>

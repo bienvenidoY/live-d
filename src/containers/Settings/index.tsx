@@ -1,7 +1,8 @@
 import classnames from 'classnames'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
-import { useEffect, useMemo, useState } from 'react'
+import {useEffect, useMemo, useRef, useState} from 'react'
 import Update from '@/components/update'
+import EditCode from './components/EditCode'
 import { ipcRenderer} from 'electron'
 
 import { Header, Card, Switch, ButtonSelect, Button,Icon, type ButtonSelectOptions, Input, Select } from '@/components'
@@ -14,6 +15,7 @@ import {
 } from '@/stores'
 import './style.scss'
 
+
 interface DiskStoreTYpe {
     licenseCode: string
     wsProxyCode: string
@@ -24,10 +26,12 @@ export default function Settings () {
     const { version } = useVersion()
 
     const setIdentity = useSetAtom(identityAtom)
+
     const { translation } = useI18n()
     const { t } = translation('Settings')
 
     const license = useAtomValue(licenseAtom)
+    const [editPopShow,setEditPopShow] = useState(false)
 
     const [diskStore, setDiskStore] = useState<DiskStoreTYpe>({
         licenseCode: '',
@@ -46,10 +50,10 @@ export default function Settings () {
     })
   }
 
+
   useEffect(() => {
     fetchDiskStore().then()
   }, [])
-
     return (
         <div className="page">
             <Header title={t('title')} />
@@ -61,7 +65,7 @@ export default function Settings () {
                             <span>{diskStore.licenseCode}</span>
                             <span
                               className={classnames({'modify-btn': true}, 'external-controller')}
-                              onClick={() => setIdentity(false)}> 编辑
+                              onClick={() => {setEditPopShow(true)}}> 编辑
                             </span>
                         </div>
                     </div>
@@ -82,6 +86,7 @@ export default function Settings () {
                   <Update />
                 </span>
             </Card>
+            <EditCode visible={editPopShow} setEditPopShow={setEditPopShow} fetchDiskStore={fetchDiskStore}/>
         </div>
     )
 }
