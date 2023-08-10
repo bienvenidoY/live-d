@@ -71,7 +71,7 @@ const columns = [
     },
     {
         title: '主播昵称',
-        dataIndex: 'nickname',
+        dataIndex: 'owner.nickname',
         width: 100,
         render: (col, item) => {
             return <Typography.Paragraph
@@ -96,7 +96,7 @@ const columns = [
     },
     {
         title: '在线/观看',
-        dataIndex: 'total',
+        dataIndex: 'userCountStr/totalUserStr',
         render: (col, item) => {
             return <>
                 {item.userCountStr}/ {item.totalUserStr}
@@ -234,7 +234,22 @@ const SearchHeader: React.FC = (props: SearchHeaderProps) => {
     }
 
     function saveExcelFile() {
-        // TODO 导出所有直播列表中ws
+        const dataSource = props.liveRoomList
+        const wsData = dataSource.map(item =>
+          columns.map((col, index) => {
+              if (col.dataIndex) {
+                  return item[col.dataIndex];
+              } else if (col.render) {
+                  return col.render(null, item, index);
+              }
+              return '';
+          })
+        );
+
+        const ws = XLSX.utils.aoa_to_sheet([columns.map(col => col.title), ...wsData]);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+        XLSX.writeFile(wb, 'exported_data.xlsx');
         const reslut = props.liveRoomList.map((item,index)=>{
             return{
                 '序号':index+1,
@@ -357,9 +372,9 @@ const options = [
     {label: '弹幕', value:  'WebcastChatMessage', defaultChecked: true},
     {label: '点赞', value:  'WebcastLikeMessage', defaultChecked: true},
     {label: '关注', value:  'WebcastSocialMessage', defaultChecked: true},
-    {label: '信息跟随', value: 6, defaultChecked: true},
+    // {label: '信息跟随', value: 6, defaultChecked: true},
     {label: '自动去重', value: 7, defaultChecked: true},
-    {label: '自动抓取', value: 8, defaultChecked: true},
+    // {label: '自动抓取', value: 8, defaultChecked: true},
     {label: '解析完整信息(需要代理,采集速度会变慢)', value: 9, defaultChecked: false},
 ]
 
