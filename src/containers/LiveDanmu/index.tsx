@@ -763,11 +763,12 @@ const LiveDanmuPage = () => {
         const recordIndex = liveRoomList.findIndex(v => v.roomId === data.roomId)
         const toUserNickname = recordIndex > -1 ? liveRoomList[recordIndex].owner?.nickname : '--'
         setUserData((prevUserData) => {
-            return [...prevUserData, ...[
+            return [...[
                 {
                     ...data,
                     toUserNickname,
-                }
+                },
+                ...prevUserData
             ]]
         })
     }
