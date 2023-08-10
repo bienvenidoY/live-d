@@ -351,8 +351,9 @@ interface LivePendingOptionsType {
     roomTitle: string
 }
 interface UserTableOptionsProps {
-    livePendingOptions: LivePendingOptionsType[]
+    liveRoomList: LivePendingOptionsType[]
     onCheckBoxSelected: (selected: string[]) => void
+    onSetSelectLiveChange: (selected: string[]) => void
 }
 
 const UserTableOptions: React.FC = (props: UserTableOptionsProps) => {
@@ -377,12 +378,13 @@ const UserTableOptions: React.FC = (props: UserTableOptionsProps) => {
                     addBefore='直播间'
                     placeholder='请选择直播间'
                     showSearch
+                    allowClear
                     style={{width: 300}}
                     onChange={(value) =>
-                        console.log(123, value)
+                      props.onSetSelectLiveChange(value ?? '')
                     }
                 >
-                    {props.livePendingOptions.map((option, index) => (
+                    {props.liveRoomList.map((option, index) => (
                         <Option key={option.roomId} value={option.roomId}>
                             {option.roomTitle}
                         </Option>
@@ -505,6 +507,7 @@ type ShareQrCodeDataType = {
 }
 interface UserTableProps {
     userData: [],
+    selectLive: string,
     checkBoxSelected: string[]
     setShareQrCodeData: (val: (prev: ShareQrCodeDataType) => ShareQrCodeDataType) => void
     shareQrCodeData: ShareQrCodeDataType
@@ -520,7 +523,7 @@ const UserTable: React.FC = (props: UserTableProps) => {
             const {url_list = []} = share_qrcode_url
             props.setShareQrCodeData(() => ({
                 url: url_list[0] ?? '',
-                nickname: item?.user?.nickName ?? '',
+                nickname: item?.nickName ?? '',
                 secUid: item.secUid
             }))
         }).catch(() => {
@@ -542,6 +545,11 @@ const UserTable: React.FC = (props: UserTableProps) => {
         }, []);
     }else {
         uniqueArray = data
+    }
+
+    // 筛选直播间
+    if(props.selectLive) {
+        uniqueArray = uniqueArray.filter(v => v.roomId === props.selectLive)
     }
 
     return <div>
@@ -594,7 +602,7 @@ const LiveDanmuPage = () => {
     const client = useServiceClient()
     const [userData, setUserData] = useState([])
     const [shareQrCodeData, setShareQrCodeData] = useState({url: '', nickname: '', secUid: ''})
-
+    const [selectLive, setSelectLiveChange] = useState('')
 
     useEffect(() => {
         const [_, errList = []] = tableValues
@@ -718,7 +726,7 @@ const LiveDanmuPage = () => {
     },[liveRoomList])
 
     const handleMessage = async (event, data) => {
-        console.log('消息处理-'+data.method , data.message)
+        // console.log('消息处理-'+data.method , data.message)
         const recordIndex = liveRoomList.findIndex(v => v.roomId === data.roomId)
         const toUserNickname = recordIndex > -1 ? liveRoomList[recordIndex].owner?.nickname : '--'
         setUserData((prevUserData) => {
@@ -734,6 +742,8 @@ const LiveDanmuPage = () => {
     const handleRoom = async (event, data) => {
         const list = [...liveRoomList]
         const recordIndex = list.findIndex(v => v.roomId === data.roomId)
+        console.log('消息处理-'+data.method , data.message)
+
         if (recordIndex < 0) return
         list[recordIndex].userCountStr = data.total
         list[recordIndex].totalUserStr = data.totalUser
@@ -790,10 +800,15 @@ const LiveDanmuPage = () => {
                     <Card>
                         <Space size={8} direction="vertical" style={{width: '100%'}}>
                             <UserTableOptions
-                              livePendingOptions={liveRoomList.filter(v => v.connectStatus === ConnectEnum['正在抓取'])}
+                              liveRoomList={liveRoomList}
                               onCheckBoxSelected={setCheckBoxSelected}
+                              onSetSelectLiveChange={setSelectLiveChange}
                             />
-                            <UserTable userData={userData} setShareQrCodeData={setShareQrCodeData} checkBoxSelected={checkBoxSelected}/>
+                            <UserTable userData={userData}
+                                       setShareQrCodeData={setShareQrCodeData}
+                                       checkBoxSelected={checkBoxSelected}
+                                       selectLive={selectLive}
+                            />
                         </Space>
                     </Card>
                 </Col>
