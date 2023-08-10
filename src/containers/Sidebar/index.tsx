@@ -38,8 +38,6 @@ export default function Sidebar (props: SidebarProps) {
                 { navlinks }
             </ul>
             <div className="sidebar-version">
-              <span className="sidebar-version-label">帮助文档</span>
-              <span className="sidebar-version-text">QQ群 80808080</span>
               <span className="sidebar-version-text">版本{ version }</span>
             </div>
         </div>
