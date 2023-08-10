@@ -107,7 +107,6 @@ class WebSocketManager<T> {
     this.createConnection()
   }
   subscribe (event: string, callback: (data: T[]) => void) {
-    console.log('subscribe', event, this.EE.listenerCount(event))
     this.EE.addListener(event, callback)
   }
   unsubscribe (){
@@ -124,9 +123,9 @@ export const injectSocket = () => {
     manager.subscribe('data', (data) => {
       event.sender.send(`data-subscribe`, data);
     })
-    // manager.subscribe('room', (data) => {
-    //   event.sender.send(`room-subscribe`, data);
-    // })
+    manager.subscribe('room', (data) => {
+      event.sender.send(`room-subscribe`, data);
+    })
   });
   ipcMain.handle('unsubscribe', (event, eventName) => {
     manager.unsubscribe()
