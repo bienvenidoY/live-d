@@ -51,7 +51,6 @@ export const components = {
 
 
 interface ResizeAbelProps {
-    tableOriginal: Record<string, any> // 组件库table原生支持的props,不包括columns和data
     columns:any[]
     data:any[]
     openRightMenu: (menuItem: MenuListType, record) => void;
@@ -60,7 +59,7 @@ interface ResizeAbelProps {
 }
 
 export const ResizeAbel: React.FC = (props: ResizeAbelProps) => {
-    const [Acolumns, setAcolumns] = useState(props.columns.map((column, index) => {
+    const initData = props.columns.map((column, index) => {
         if (column.width) {
             return {
                 ...column,
@@ -71,11 +70,12 @@ export const ResizeAbel: React.FC = (props: ResizeAbelProps) => {
             };
         }
         return column;
-    }))
+    })
+    const [tempColumns, setColumns] = useState(initData)
 
     function handleResize(index) {
         return (e, {size}) => {
-            setAcolumns((prevColumns) => {
+            setColumns((prevColumns) => {
                 const nextColumns = [...prevColumns];
                 nextColumns[index] = {...nextColumns[index], width: size.width};
                 return nextColumns;
@@ -98,14 +98,12 @@ export const ResizeAbel: React.FC = (props: ResizeAbelProps) => {
                     }
                 };
             }}
-            rowClassName={(record) => {
-                if(record.connectStatus === ConnectEnum['正在抓取']) {
-                    return 'is-connecting'
-                }
-            }}
-            className='table-demo-resizable-column'
             size='mini'
             virtualized
+            virtualListProps={{
+                height: 300,
+                itemHeight: 40
+            }}
             scroll={{
                 y: 300,
             }}
@@ -113,9 +111,8 @@ export const ResizeAbel: React.FC = (props: ResizeAbelProps) => {
             borderCell
             pagination={false}
             components={components}
-            columns={Acolumns}
+            columns={tempColumns}
             data={props.data}
-            {...props.tableOriginal}
         />
     )
 }

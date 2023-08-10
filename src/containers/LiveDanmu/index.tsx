@@ -281,7 +281,7 @@ interface LiveRoomTableProps {
     removeLive: (val: any, index) => void
     exportLive: () => void
     clearAllLive: () => void
-    shareQrCodeData: { url: string, nickname: string }
+    shareQrCodeData: ShareQrCodeDataType
 }
 
 const LiveRoomTable: React.FC = (props: LiveRoomTableProps) => {
@@ -407,9 +407,8 @@ const userColumns = [
         dataIndex: 'name',
         width: 140,
         render: (col, item) => {
-            const {toUser} = item
             return <Typography.Paragraph ellipsis={{rows: 1, showTooltip: true, wrapper: 'span'}}>
-                {toUser?.nickName}
+                {item?.toUserNickname}
             </Typography.Paragraph>
         }
     },
@@ -502,31 +501,53 @@ const userColumns = [
 type ShareQrCodeDataType = {
     url: string
     nickname: string
+    secUid: string
 }
 interface UserTableProps {
     userData: [],
+    checkBoxSelected: string[]
     setShareQrCodeData: (val: (prev: ShareQrCodeDataType) => ShareQrCodeDataType) => void
+    shareQrCodeData: ShareQrCodeDataType
 }
 
 const UserTable: React.FC = (props: UserTableProps) => {
     const client = useServiceClient()
-
+    const secUid = props.shareQrCodeData?.secUid
     const onUserClick = (item) => {
-        client.getUserprofile(item.user.secUid).then(res => {
+        if( secUid && secUid === item.secUid) return
+        client.getUserprofile(item.secUid).then(res => {
             const share_qrcode_url = res?.data?.share_info?.share_qrcode_url ?? {}
             const {url_list = []} = share_qrcode_url
             props.setShareQrCodeData(() => ({
                 url: url_list[0] ?? '',
-                nickname: item.user.nickName ?? ''
+                nickname: item?.user?.nickName ?? '',
+                secUid: item.secUid
             }))
         }).catch(() => {
 
         })
     }
+
+    const data = props.userData.filter(v => props.checkBoxSelected.includes(v.method))
+    let uniqueArray = []
+    // 去重7
+    if(props.checkBoxSelected.includes(7)) {
+        uniqueArray = data.reduce((accumulator, currentValue) => {
+            if (!accumulator.some(item => `${item.method}_${ item.displayId}_${item.roomId}`
+              ===
+              `${currentValue.method}_${ currentValue.displayId}_${currentValue.roomId}`)) {
+                accumulator.push(currentValue);
+            }
+            return accumulator;
+        }, []);
+    }else {
+        uniqueArray = data
+    }
+
     return <div>
         <ResizeAbelUser
             columns={userColumns}
-            data={props.userData}
+            data={uniqueArray}
             onUserClick={onUserClick}
         />
     </div>
@@ -572,7 +593,7 @@ const LiveDanmuPage = () => {
     const [checkBoxSelected, setCheckBoxSelected] = useState(options.filter(v=> v.defaultChecked).map(v => v.value))
     const client = useServiceClient()
     const [userData, setUserData] = useState([])
-    const [shareQrCodeData, setShareQrCodeData] = useState({url: '', nickname: ''})
+    const [shareQrCodeData, setShareQrCodeData] = useState({url: '', nickname: '', secUid: ''})
 
 
     useEffect(() => {
@@ -619,7 +640,7 @@ const LiveDanmuPage = () => {
         // 清空用户评论列表
         setUserData([])
         // 清空二维码信息
-        setShareQrCodeData({url: '', nickname: ''})
+        setShareQrCodeData({url: '', nickname: '', secUid: ''})
     }
 
     async function startAll() {
@@ -669,9 +690,16 @@ const LiveDanmuPage = () => {
     }
 
     const handleMessage = async (event, data) => {
-        console.log('消息处理-'+data.method , data)
+        console.log('消息处理-'+data.method , data.message)
+        const recordIndex = liveRoomList.findIndex(v => v.roomId === data.roomId)
+        const toUserNickname = recordIndex > -1 ? liveRoomList[recordIndex].owner?.nickname : '--'
         setUserData((prevUserData) => {
-            return [...prevUserData, ...[data]];
+            return [...prevUserData, ...[
+                {
+                    ...data,
+                    toUserNickname,
+                }
+            ]]
         })
     }
 
@@ -736,9 +764,8 @@ const LiveDanmuPage = () => {
                             <UserTableOptions
                               livePendingOptions={liveRoomList.filter(v => v.connectStatus === ConnectEnum['正在抓取'])}
                               onCheckBoxSelected={setCheckBoxSelected}
-
                             />
-                            <UserTable userData={userData} setShareQrCodeData={setShareQrCodeData}/>
+                            <UserTable userData={userData} setShareQrCodeData={setShareQrCodeData} checkBoxSelected={checkBoxSelected}/>
                         </Space>
                     </Card>
                 </Col>

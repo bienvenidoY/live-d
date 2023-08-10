@@ -60,7 +60,7 @@ const unifyData: UnifyDataTypes = {
   methodText: '',
   roomId: '',
   giftNum: 0,
-  actionTime: '',
+  actionTime: dayjs().format('YYYY/MM/DD HH:mm:ss'),
   shortId: '',
   secUid: '',
   displayId: '',
@@ -101,6 +101,7 @@ export async function getMessage(message, callback: Function) {
   let result: Partial<UnifyDataTypes> = {};
   const {GiftMessage, ChatMessage, MemberMessage, SocialMessage, LikeMessage, RoomUserSeqMessage } = await resolver();
   // 遍历消息列表
+  console.log(message)
   for (let msg of message) {
     // 根据方法处理消息
     switch (msg.method) {
@@ -256,6 +257,7 @@ function webcastLikeMessage(message) {
   const body: any = {}
   body.method = message.common.method;
   body.roomId = message.common.roomId.toString();
+  body.methodText = MessageMethodEnums[message.common.method]
 
   const user = getUserData(message)
   return {
