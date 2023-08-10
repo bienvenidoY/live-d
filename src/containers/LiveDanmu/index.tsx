@@ -172,6 +172,7 @@ const SearchHeader: React.FC = (props: SearchHeaderProps) => {
                     const reslut = []
                     workbook.SheetNames.forEach(item => {
                         const tv = XLSX.utils.sheet_to_json(workbook.Sheets[item])
+                        console.log('tv',tv)
                         if (tv.length < 200) {
                             reslut.push({
                                 name: item,
@@ -235,24 +236,6 @@ const SearchHeader: React.FC = (props: SearchHeaderProps) => {
 
     function saveExcelFile() {
         // TODO 导出所有直播列表中ws
-        const reslut = props.liveRoomList.map((item,index)=>{
-            return{
-                '序号':index+1,
-                '房间标题':item.roomTitle,
-                '主播昵称':item.nickname,
-                '开播状态': LiveStatsType['正在直播'] === item.roomStatus ? LiveStatsType[LiveStatsType['正在直播']] : LiveStatsType[LiveStatsType['未开播']],
-                '在线/观看':`${item.userCountStr}/ ${item.totalUserStr}`,
-                '喜欢':item.likeCountStr,
-            }
-        })
-        const jsonWorkSheet = XLSX.utils.json_to_sheet(reslut);
-        const workBook = {
-            SheetNames: ['sheet1'],
-            Sheets: {
-                ['sheet1']: jsonWorkSheet,
-            }
-        };
-        XLSX.writeFile(workBook, '直播监视数据.xlsx');
     }
 
     return (<div style={{marginBottom: 16}}>
@@ -327,7 +310,7 @@ const LiveRoomTable: React.FC = (props: LiveRoomTableProps) => {
     return (
         <Row>
             <Col span={16}>
-                <div >
+                <div>
                     <ResizeAbel
                         columns={columns}
                         data={props.liveRoomList}
@@ -370,7 +353,6 @@ interface LivePendingOptionsType {
 interface UserTableOptionsProps {
     livePendingOptions: LivePendingOptionsType[]
     onCheckBoxSelected: (selected: string[]) => void
-    handleExportExcel:()=>void
 }
 
 const UserTableOptions: React.FC = (props: UserTableOptionsProps) => {
@@ -386,6 +368,7 @@ const UserTableOptions: React.FC = (props: UserTableOptionsProps) => {
         props.onCheckBoxSelected(v)
         setSelected(v)
     }
+
     return (
         <div>
 
@@ -405,7 +388,7 @@ const UserTableOptions: React.FC = (props: UserTableOptionsProps) => {
                         </Option>
                     ))}
                 </Select>
-                <Button onClick={()=>props.handleExportExcel()}>保存Excel</Button>
+                <Button>保存Excel</Button>
                 <CheckboxGroup value={selected} options={options} onChange={onChange}/>
             </Space>
         </div>
@@ -780,35 +763,6 @@ const LiveDanmuPage = () => {
         setLiveRoomList(list)
     }
 
-    function handleExportExcel(){
-        const reslut = userData.map((item,index)=>{
-            return{
-                '序号':index+1,
-                '主播昵称':item.toUserNickname,
-                '动作':item.methodText,
-                '礼物数量':item.giftNum,
-                '动作时间':item.actionTime,
-                'Uid':item.shortId,
-                'secUid':item.secUid,
-                '用户昵称':item.nickName,
-                '抖音号':item.displayId,
-                '性别':item.gender,
-                '年龄':item.user_age,
-                '城市':item.city,
-                '简介':item.signature,
-                '私密账号':item.secret,
-                '手机号':item.email10,
-            }
-        })
-        const jsonWorkSheet = XLSX.utils.json_to_sheet(reslut);
-        const workBook = {
-            SheetNames: ['sheet1'],
-            Sheets: {
-                ['sheet1']: jsonWorkSheet,
-            }
-        };
-        XLSX.writeFile(workBook, '直播观众数据.xlsx');
-    }
     return <div className="page">
         <Space size={16} direction="vertical" style={{width: '100%'}}>
             <Card>
@@ -838,7 +792,6 @@ const LiveDanmuPage = () => {
                             <UserTableOptions
                               livePendingOptions={liveRoomList.filter(v => v.connectStatus === ConnectEnum['正在抓取'])}
                               onCheckBoxSelected={setCheckBoxSelected}
-                              handleExportExcel={handleExportExcel}
                             />
                             <UserTable userData={userData} setShareQrCodeData={setShareQrCodeData} checkBoxSelected={checkBoxSelected}/>
                         </Space>
