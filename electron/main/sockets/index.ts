@@ -60,6 +60,7 @@ class WebSocketManager<T> {
         if(decodedMessage.method === "WebcastRoomUserSeqMessage") {
           this.EE.emit('room', decodedMessage)
         }else {
+          console.log(decodedMessage.method , decodedMessage.displayId)
           this.EE.emit('data', decodedMessage)
         }
       })
@@ -106,7 +107,11 @@ class WebSocketManager<T> {
     this.createConnection()
   }
   subscribe (event: string, callback: (data: T[]) => void) {
+    console.log('subscribe', event, this.EE.listenerCount(event))
     this.EE.addListener(event, callback)
+  }
+  unsubscribe (){
+    this.EE.removeAllListeners()
   }
 }
 
@@ -116,9 +121,15 @@ export const injectSocket = () => {
     manager.connect(data)
   });
   ipcMain.handle('subscribe', (event, eventName) => {
-    manager.subscribe(eventName, (data) => {
-      event.sender.send(`${eventName}-response`, data);
+    manager.subscribe('data', (data) => {
+      event.sender.send(`data-subscribe`, data);
     })
+    // manager.subscribe('room', (data) => {
+    //   event.sender.send(`room-subscribe`, data);
+    // })
+  });
+  ipcMain.handle('unsubscribe', (event, eventName) => {
+    manager.unsubscribe()
   });
 
   ipcMain.handle('closeSocket', (event, liveId) => {

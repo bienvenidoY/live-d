@@ -101,7 +101,6 @@ export async function getMessage(message, callback: Function) {
   let result: Partial<UnifyDataTypes> = {};
   const {GiftMessage, ChatMessage, MemberMessage, SocialMessage, LikeMessage, RoomUserSeqMessage } = await resolver();
   // 遍历消息列表
-  console.log(message)
   for (let msg of message) {
     // 根据方法处理消息
     switch (msg.method) {

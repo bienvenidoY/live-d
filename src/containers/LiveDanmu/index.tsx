@@ -675,6 +675,8 @@ const LiveDanmuPage = () => {
             await stopConnect(record);
         }
     }
+    const [initListenerExecuted, setInitListenerExecuted] = useState(false);
+
     async function startConnect(record, index?: number) {
         const list = [...liveRoomList]
         const recordIndex = index ?? list.findIndex(v => v.roomId === record.roomId)
@@ -682,12 +684,38 @@ const LiveDanmuPage = () => {
         list[recordIndex].connectStatus = ConnectEnum['正在抓取']
 
         await ipcRenderer.invoke('createSocket', {...record.wsData, liveId: record.id})
-        await ipcRenderer.invoke('subscribe', 'data')
-        await ipcRenderer.invoke('subscribe', 'room')
-        ipcRenderer.on('data-response', handleMessage);
-        ipcRenderer.on('room-response', handleRoom);
         setLiveRoomList(list)
     }
+    async function initAddListener() {
+        if(initListenerExecuted) return
+        setInitListenerExecuted(true)
+        await ipcRenderer.invoke('unsubscribe')
+        await ipcRenderer.invoke('subscribe')
+        // await ipcRenderer.invoke('unsubscribe', )
+        ipcRenderer.on('data-subscribe', handleMessage);
+        ipcRenderer.on('room-subscribe', handleRoom);
+    }
+    async function removeAddListener() {
+        await ipcRenderer.invoke('unsubscribe')
+        setInitListenerExecuted(false)
+        // await ipcRenderer.invoke('unsubscribe', )
+        ipcRenderer.removeAllListeners('data-subscribe');
+        ipcRenderer.removeAllListeners('room-subscribe');
+    }
+
+
+    useEffect(() => {
+        if (liveRoomList.some(room => room.connectStatus === ConnectEnum['正在抓取'])) {
+            initAddListener().then();
+        }
+        if(liveRoomList.every(room => room.connectStatus === ConnectEnum['未抓取'])) {
+            removeAddListener().then();
+        }
+
+        return () => {
+            removeAddListener().then();
+        };
+    },[liveRoomList])
 
     const handleMessage = async (event, data) => {
         console.log('消息处理-'+data.method , data.message)
